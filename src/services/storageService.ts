@@ -22,7 +22,9 @@ import {
   RegisteredSchool,
   ExamMarkDistribution,
   AppNotification,
-  DeveloperInfo
+  DeveloperInfo,
+  SchoolEvent,
+  SchoolGalleryImage
 } from '../types';
 
 import {
@@ -46,7 +48,10 @@ import {
   initialSmsLogs,
   initialMarkDistributions,
   initialNotifications,
-  initialDeveloperInfo
+  initialDeveloperInfo,
+  defaultInfrastructure,
+  initialSchoolEvents,
+  initialGalleryImages
 } from './mockData';
 
 export const initialSmsGatewayConfig: SmsGatewayConfig = {
@@ -86,6 +91,8 @@ const STORAGE_KEYS = {
   MARK_DISTRIBUTIONS: 'e_school_mark_distributions',
   NOTIFICATIONS: 'e_school_notifications',
   DEVELOPER_INFO: 'e_school_developer_info',
+  EVENTS: 'e_school_events',
+  GALLERY_IMAGES: 'e_school_gallery_images',
 };
 
 function getLocal<T>(key: string, fallback: T): T {
@@ -110,7 +117,14 @@ export class StorageService {
   // Load All State
   static loadAll() {
     return {
-      settings: getLocal<SchoolSettings>(STORAGE_KEYS.SETTINGS, initialSchoolSettings),
+      settings: (() => {
+        const s = getLocal<SchoolSettings>(STORAGE_KEYS.SETTINGS, initialSchoolSettings);
+        if (!s.infrastructure) {
+          s.infrastructure = defaultInfrastructure;
+          setLocal(STORAGE_KEYS.SETTINGS, s);
+        }
+        return s;
+      })(),
       classes: getLocal<SchoolClass[]>(STORAGE_KEYS.CLASSES, initialClasses),
       subjects: getLocal<Subject[]>(STORAGE_KEYS.SUBJECTS, initialSubjects),
       teachers: getLocal<Teacher[]>(STORAGE_KEYS.TEACHERS, initialTeachers),
@@ -124,6 +138,8 @@ export class StorageService {
       classRoutine: getLocal<ClassRoutineItem[]>(STORAGE_KEYS.CLASS_ROUTINE, initialClassRoutines),
       fees: getLocal<FeeReceipt[]>(STORAGE_KEYS.FEES, initialFeeReceipts),
       notices: getLocal<Notice[]>(STORAGE_KEYS.NOTICES, initialNotices),
+      events: getLocal<SchoolEvent[]>(STORAGE_KEYS.EVENTS, initialSchoolEvents),
+      galleryImages: getLocal<SchoolGalleryImage[]>(STORAGE_KEYS.GALLERY_IMAGES, initialGalleryImages),
       homework: getLocal<Homework[]>(STORAGE_KEYS.HOMEWORK, initialHomeworks),
       competencies: getLocal<CompetencyAssessment[]>(STORAGE_KEYS.COMPETENCY, initialCompetencies),
       smsLogs: getLocal<SmsLog[]>(STORAGE_KEYS.SMS_LOGS, initialSmsLogs),
@@ -236,6 +252,12 @@ export class StorageService {
   static saveRegisteredSchools(schools: RegisteredSchool[]) {
     setLocal(STORAGE_KEYS.REGISTERED_SCHOOLS, schools);
   }
+  static saveEvents(events: SchoolEvent[]) {
+    setLocal(STORAGE_KEYS.EVENTS, events);
+  }
+  static saveGalleryImages(images: SchoolGalleryImage[]) {
+    setLocal(STORAGE_KEYS.GALLERY_IMAGES, images);
+  }
   static saveMarkDistributions(dist: ExamMarkDistribution[]) {
     setLocal(STORAGE_KEYS.MARK_DISTRIBUTIONS, dist);
   }
@@ -282,6 +304,8 @@ export class StorageService {
       if (parsed.classRoutine) setLocal(STORAGE_KEYS.CLASS_ROUTINE, parsed.classRoutine);
       if (parsed.fees) setLocal(STORAGE_KEYS.FEES, parsed.fees);
       if (parsed.notices) setLocal(STORAGE_KEYS.NOTICES, parsed.notices);
+      if (parsed.events) setLocal(STORAGE_KEYS.EVENTS, parsed.events);
+      if (parsed.galleryImages) setLocal(STORAGE_KEYS.GALLERY_IMAGES, parsed.galleryImages);
       if (parsed.homework) setLocal(STORAGE_KEYS.HOMEWORK, parsed.homework);
       if (parsed.competencies) setLocal(STORAGE_KEYS.COMPETENCY, parsed.competencies);
       if (parsed.smsLogs) setLocal(STORAGE_KEYS.SMS_LOGS, parsed.smsLogs);

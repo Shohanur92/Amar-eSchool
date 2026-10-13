@@ -26,6 +26,7 @@ export interface SchoolSettings {
   logoUrl?: string;
   signatureUrl?: string;
   currentSession: string;
+  infrastructure?: SchoolInfrastructure;
 }
 
 export interface SchoolClass {
@@ -317,5 +318,53 @@ export interface DeveloperInfo {
   email: string;
   message: string;
   updatedAt: string;
+}
+
+export interface ClassroomRoom {
+  id: string;
+  roomNo: string;
+  name: string;
+  type: 'classroom' | 'office' | 'lab' | 'library' | 'teachers_room' | 'common' | 'storage';
+  floor: string;
+  capacity: number;
+  benchCount: number;
+  fanCount: number;
+  lightCount: number;
+  condition: 'good' | 'moderate' | 'needs_repair';
+}
+
+export interface SchoolInfrastructure {
+  buildingType: string;
+  totalFloors: number;
+  totalRooms: number;
+  playGroundSize: string;
+  hasBoundaryWall: boolean;
+  drinkingWaterSource: string;
+  sanitationBoys: number;
+  sanitationGirls: number;
+  sanitationTeachers: number;
+  electricityStatus: string;
+  internetStatus: string;
+  rooms: ClassroomRoom[];
+}
+
+export interface SchoolEvent {
+  id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  endDate?: string;
+  category: 'holiday' | 'exam' | 'sports' | 'national' | 'meeting' | 'cultural' | 'other';
+  description?: string;
+  isHoliday: boolean;
+  target?: 'all' | 'students' | 'teachers' | 'guardians';
+}
+
+export interface SchoolGalleryImage {
+  id: string;
+  title: string;
+  category: 'campus' | 'classroom' | 'sports' | 'cultural' | 'lab' | 'event' | 'other';
+  imageUrl: string;
+  caption?: string;
+  date?: string;
 }
 

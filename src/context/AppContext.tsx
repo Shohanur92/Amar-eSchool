@@ -26,10 +26,12 @@ import {
   ExamMarkDistribution,
   AppNotification,
   DeveloperInfo,
-  NotificationType
+  NotificationType,
+  SchoolEvent,
+  SchoolGalleryImage
 } from '../types';
 import { StorageService, initialSmsGatewayConfig } from '../services/storageService';
-import { initialNotifications, initialDeveloperInfo } from '../services/mockData';
+import { initialNotifications, initialDeveloperInfo, initialSchoolEvents, initialGalleryImages } from '../services/mockData';
 import { translations, Language } from '../utils/translations';
 
 export type AppView =
@@ -41,6 +43,7 @@ export type AppView =
   | 'exam_routine'
   | 'class_routine'
   | 'live_routine'
+  | 'calendar'
   | 'fees'
   | 'certificates'
   | 'notices'
@@ -141,6 +144,18 @@ interface AppContextType {
   addNotice: (notice: Omit<Notice, 'id'>) => void;
   deleteNotice: (id: string) => void;
 
+  // Monthly Calendar & Events
+  events: SchoolEvent[];
+  addEvent: (event: Omit<SchoolEvent, 'id'>) => void;
+  updateEvent: (id: string, event: Partial<SchoolEvent>) => void;
+  deleteEvent: (id: string) => void;
+
+  // School Gallery
+  galleryImages: SchoolGalleryImage[];
+  addGalleryImage: (image: Omit<SchoolGalleryImage, 'id'>) => void;
+  updateGalleryImage: (id: string, image: Partial<SchoolGalleryImage>) => void;
+  deleteGalleryImage: (id: string) => void;
+
   // Homework
   homeworks: Homework[];
   addHomework: (hw: Omit<Homework, 'id'>) => void;
@@ -208,6 +223,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [classRoutines, setClassRoutines] = useState<ClassRoutineItem[]>(initialData.classRoutine);
   const [feeReceipts, setFeeReceipts] = useState<FeeReceipt[]>(initialData.fees);
   const [notices, setNotices] = useState<Notice[]>(initialData.notices);
+  const [events, setEvents] = useState<SchoolEvent[]>(initialData.events || initialSchoolEvents);
+  const [galleryImages, setGalleryImages] = useState<SchoolGalleryImage[]>(initialData.galleryImages || initialGalleryImages);
   const [homeworks, setHomeworks] = useState<Homework[]>(initialData.homework);
   const [competencies, setCompetencies] = useState<CompetencyAssessment[]>(initialData.competencies);
   const [smsLogs, setSmsLogs] = useState<SmsLog[]>(initialData.smsLogs);
@@ -819,6 +836,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     StorageService.saveNotices(updated);
   };
 
+  // Monthly Calendar & Events
+  const addEvent = (event: Omit<SchoolEvent, 'id'>) => {
+    const newEvent: SchoolEvent = { ...event, id: `ev_${Date.now()}` };
+    const updated = [newEvent, ...events];
+    setEvents(updated);
+    StorageService.saveEvents(updated);
+  };
+
+  const updateEvent = (id: string, updatedFields: Partial<SchoolEvent>) => {
+    const updated = events.map((ev) => (ev.id === id ? { ...ev, ...updatedFields } : ev));
+    setEvents(updated);
+    StorageService.saveEvents(updated);
+  };
+
+  const deleteEvent = (id: string) => {
+    const updated = events.filter((ev) => ev.id !== id);
+    setEvents(updated);
+    StorageService.saveEvents(updated);
+  };
+
+  // School Photo Gallery Handlers
+  const addGalleryImage = (image: Omit<SchoolGalleryImage, 'id'>) => {
+    const newImage: SchoolGalleryImage = { ...image, id: `gal_${Date.now()}` };
+    const updated = [newImage, ...galleryImages];
+    setGalleryImages(updated);
+    StorageService.saveGalleryImages(updated);
+  };
+
+  const updateGalleryImage = (id: string, update: Partial<SchoolGalleryImage>) => {
+    const updated = galleryImages.map((g) => (g.id === id ? { ...g, ...update } : g));
+    setGalleryImages(updated);
+    StorageService.saveGalleryImages(updated);
+  };
+
+  const deleteGalleryImage = (id: string) => {
+    const updated = galleryImages.filter((g) => g.id !== id);
+    setGalleryImages(updated);
+    StorageService.saveGalleryImages(updated);
+  };
+
   // Homework
   const addHomework = (hw: Omit<Homework, 'id'>) => {
     const newHw: Homework = { ...hw, id: `hw_${Date.now()}` };
@@ -1114,6 +1171,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notices,
         addNotice,
         deleteNotice,
+        events,
+        addEvent,
+        updateEvent,
+        deleteEvent,
+        galleryImages,
+        addGalleryImage,
+        updateGalleryImage,
+        deleteGalleryImage,
         homeworks,
         addHomework,
         deleteHomework,

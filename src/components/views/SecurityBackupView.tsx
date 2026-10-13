@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, SchoolSettings, SmsGatewayConfig } from '../../types';
+import { User, SchoolSettings, SmsGatewayConfig, ClassroomRoom, SchoolInfrastructure, SchoolGalleryImage } from '../../types';
+import { defaultInfrastructure } from '../../services/mockData';
 import { toBanglaNumber } from '../../utils/bengaliUtils';
 import {
   ShieldCheck,
@@ -18,6 +19,7 @@ import {
   AlertTriangle,
   FileJson,
   Building,
+  Building2,
   Mail,
   Phone,
   Image,
@@ -28,7 +30,13 @@ import {
   EyeOff,
   School,
   Check,
-  Sparkles
+  Sparkles,
+  Printer,
+  Plus,
+  Trash2,
+  Edit,
+  Layers,
+  MapPin
 } from 'lucide-react';
 
 export const SecurityBackupView: React.FC = () => {
@@ -49,17 +57,53 @@ export const SecurityBackupView: React.FC = () => {
     exportDatabaseBackup,
     restoreDatabaseBackup,
     toggleOnlineSimulator,
-    resetAllData
+    resetAllData,
+    galleryImages,
+    addGalleryImage,
+    updateGalleryImage,
+    deleteGalleryImage
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'profile_logo' | 'sms_api' | 'users' | 'backup'>('profile_logo');
+  const [activeTab, setActiveTab] = useState<'profile_logo' | 'infrastructure' | 'gallery' | 'sms_api' | 'users' | 'backup'>('profile_logo');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
+  // Gallery Management State
+  const [isAddGalleryOpen, setIsAddGalleryOpen] = useState(false);
+  const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
+  const [galleryForm, setGalleryForm] = useState<Omit<SchoolGalleryImage, 'id'>>({
+    title: '',
+    category: 'campus',
+    imageUrl: '',
+    caption: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+  const [galleryFilter, setGalleryFilter] = useState<string>('all');
+
   // School profile form
   const [profileForm, setProfileForm] = useState<SchoolSettings>(settings);
+
+  // Infrastructure & Room Inventory State
+  const [infraForm, setInfraForm] = useState<SchoolInfrastructure>(
+    settings.infrastructure || defaultInfrastructure
+  );
+  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+  const [roomForm, setRoomForm] = useState<ClassroomRoom>({
+    id: '',
+    roomNo: '১০৫',
+    name: 'শ্রেণি কক্ষ',
+    type: 'classroom',
+    floor: 'নিচতলা',
+    capacity: 40,
+    benchCount: 14,
+    fanCount: 4,
+    lightCount: 4,
+    condition: 'good',
+  });
+  const [roomFilter, setRoomFilter] = useState<string>('all');
 
   // SMS API form
   const [smsApiForm, setSmsApiForm] = useState<SmsGatewayConfig>(smsConfig);
@@ -118,6 +162,131 @@ export const SecurityBackupView: React.FC = () => {
     updateSettings(profileForm);
     setSuccessMsg('বিদ্যালয় প্রোফাইল ও তথ্যাবলি সফলভাবে সংরক্ষিত হয়েছে!');
     setTimeout(() => setSuccessMsg(''), 3500);
+  };
+
+  // Infrastructure & Room Inventory Handlers
+  const handleSaveInfrastructure = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const updated = { ...settings, infrastructure: infraForm };
+    updateSettings(updated);
+    setSuccessMsg('বিদ্যালয় অবকাঠামো ও কক্ষ বিবরণী সফলভাবে সংরক্ষিত হয়েছে!');
+    setTimeout(() => setSuccessMsg(''), 3500);
+  };
+
+  const handleOpenAddRoom = () => {
+    setEditingRoomId(null);
+    setRoomForm({
+      id: `rm_${Date.now()}`,
+      roomNo: String(100 + (infraForm.rooms?.length || 0) + 1),
+      name: 'শ্রেণি কক্ষ',
+      type: 'classroom',
+      floor: 'নিচতলা',
+      capacity: 40,
+      benchCount: 14,
+      fanCount: 4,
+      lightCount: 4,
+      condition: 'good',
+    });
+    setIsAddRoomOpen(true);
+  };
+
+  const handleOpenEditRoom = (room: ClassroomRoom) => {
+    setEditingRoomId(room.id);
+    setRoomForm(room);
+    setIsAddRoomOpen(true);
+  };
+
+  const handleSaveRoomModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    let updatedRooms: ClassroomRoom[];
+    if (editingRoomId) {
+      updatedRooms = (infraForm.rooms || []).map((r) =>
+        r.id === editingRoomId ? roomForm : r
+      );
+    } else {
+      updatedRooms = [...(infraForm.rooms || []), { ...roomForm, id: `rm_${Date.now()}` }];
+    }
+    const updatedInfra = { ...infraForm, rooms: updatedRooms, totalRooms: updatedRooms.length };
+    setInfraForm(updatedInfra);
+    updateSettings({ ...settings, infrastructure: updatedInfra });
+    setIsAddRoomOpen(false);
+    setSuccessMsg('কক্ষ বিবরণী সফলভাবে সংরক্ষিত ও আপডেট হয়েছে!');
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const handleDeleteRoom = (roomId: string) => {
+    if (confirm('আপনি কি নিশ্চিতভাবে এই কক্ষের বিবরণ মুছে ফেলতে চান?')) {
+      const updatedRooms = (infraForm.rooms || []).filter((r) => r.id !== roomId);
+      const updatedInfra = { ...infraForm, rooms: updatedRooms, totalRooms: updatedRooms.length };
+      setInfraForm(updatedInfra);
+      updateSettings({ ...settings, infrastructure: updatedInfra });
+      setSuccessMsg('কক্ষটি তালিকা থেকে মুছে ফেলা হয়েছে!');
+      setTimeout(() => setSuccessMsg(''), 2500);
+    }
+  };
+
+  // Gallery Handlers
+  const handleOpenAddGallery = () => {
+    setEditingGalleryId(null);
+    setGalleryForm({
+      title: '',
+      category: 'campus',
+      imageUrl: '',
+      caption: '',
+      date: new Date().toISOString().split('T')[0],
+    });
+    setIsAddGalleryOpen(true);
+  };
+
+  const handleOpenEditGallery = (img: SchoolGalleryImage) => {
+    setEditingGalleryId(img.id);
+    setGalleryForm({
+      title: img.title,
+      category: img.category,
+      imageUrl: img.imageUrl,
+      caption: img.caption || '',
+      date: img.date || new Date().toISOString().split('T')[0],
+    });
+    setIsAddGalleryOpen(true);
+  };
+
+  const handleGalleryPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      alert('ছবির সাইজ সর্বোচ্চ ৪ মেগাবাইট হতে পারবে!');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setGalleryForm((prev) => ({ ...prev, imageUrl: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveGalleryModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!galleryForm.imageUrl) {
+      alert('অনুগ্রহ করে একটি ছবি নির্বাচন বা ইমেজ লিংক প্রদান করুন!');
+      return;
+    }
+    if (editingGalleryId) {
+      updateGalleryImage(editingGalleryId, galleryForm);
+      setSuccessMsg('গ্যালারির ছবির তথ্য সফলভাবে হালনাগাদ করা হয়েছে!');
+    } else {
+      addGalleryImage(galleryForm);
+      setSuccessMsg('নতুন ছবি সফলভাবে বিদ্যালয়ের ফটো গ্যালারিতে যুক্ত হয়েছে!');
+    }
+    setIsAddGalleryOpen(false);
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const handleDeleteGallery = (id: string, title: string) => {
+    if (confirm(`আপনি কি নিশ্চিতভাবে "${title}" ছবিটি গ্যালারি থেকে মুছে ফেলতে চান?`)) {
+      deleteGalleryImage(id);
+      setSuccessMsg('ছবিটি গ্যালারি থেকে মুছে ফেলা হয়েছে!');
+      setTimeout(() => setSuccessMsg(''), 2500);
+    }
   };
 
   // SMS API Save
@@ -246,6 +415,30 @@ export const SecurityBackupView: React.FC = () => {
         >
           <Image className="w-4 h-4" />
           <span>বিদ্যালয় প্রোফাইল ও লোগো আপলোড</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('infrastructure')}
+          className={`pb-3 border-b-2 flex items-center gap-1.5 shrink-0 ${
+            activeTab === 'infrastructure'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 font-bold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>বিদ্যালয় অবকাঠামো ও কক্ষ বিবরণী</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('gallery')}
+          className={`pb-3 border-b-2 flex items-center gap-1.5 shrink-0 ${
+            activeTab === 'gallery'
+              ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 font-bold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Image className="w-4 h-4" />
+          <span>ফটো গ্যালারি ব্যবস্থাপনা</span>
         </button>
 
         <button
@@ -454,6 +647,829 @@ export const SecurityBackupView: React.FC = () => {
               >
                 তথ্যাবলি ও লোগো সংরক্ষণ করুন
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1.5: SCHOOL INFRASTRUCTURE & ROOM DIRECTORY */}
+      {activeTab === 'infrastructure' && (
+        <div className="space-y-6">
+          {/* Infrastructure Metric Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center font-bold">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">মোট তলা</p>
+                <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                  {toBanglaNumber(infraForm.totalFloors)} তলা
+                </h4>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center font-bold">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">মোট সক্রিয় কক্ষ</p>
+                <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                  {toBanglaNumber(infraForm.rooms?.length || infraForm.totalRooms)} টি
+                </h4>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center font-bold">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">মোট আসন ক্ষমতা</p>
+                <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                  {toBanglaNumber((infraForm.rooms || []).reduce((acc, r) => acc + (r.capacity || 0), 0))} জন
+                </h4>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center font-bold">
+                <School className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">মোট টয়লেট/স্যানিটেশন</p>
+                <h4 className="text-lg font-black text-slate-900 dark:text-white">
+                  {toBanglaNumber((infraForm.sanitationBoys || 0) + (infraForm.sanitationGirls || 0) + (infraForm.sanitationTeachers || 0))} টি
+                </h4>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* General Infrastructure Details Form */}
+            <div className="lg:col-span-5 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <Building className="w-4 h-4 text-emerald-600" />
+                  <span>বিদ্যালয় অবকাঠামো সাধারণ তথ্য</span>
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                  সরকারি মানদণ্ড
+                </span>
+              </div>
+
+              <form onSubmit={handleSaveInfrastructure} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    ভবনের ধরন ও বিবরণ *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={infraForm.buildingType || ''}
+                    onChange={(e) => setInfraForm({ ...infraForm, buildingType: e.target.value })}
+                    placeholder="যেমন: পাকা বহুতল ভবন (২ তলা)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      মোট তলা সংখ্যা *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={infraForm.totalFloors || 1}
+                      onChange={(e) => setInfraForm({ ...infraForm, totalFloors: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      মোট কক্ষ সংখ্যা *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={infraForm.rooms?.length || infraForm.totalRooms || 1}
+                      onChange={(e) => setInfraForm({ ...infraForm, totalRooms: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    খেলার মাঠের পরিমাপ ও বিবরণ
+                  </label>
+                  <input
+                    type="text"
+                    value={infraForm.playGroundSize || ''}
+                    onChange={(e) => setInfraForm({ ...infraForm, playGroundSize: e.target.value })}
+                    placeholder="যেমন: ৬০ শতাংশ (সবুজ ঘাসের মাঠ)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                  <input
+                    type="checkbox"
+                    id="boundaryCheck"
+                    checked={infraForm.hasBoundaryWall}
+                    onChange={(e) => setInfraForm({ ...infraForm, hasBoundaryWall: e.target.checked })}
+                    className="w-4 h-4 text-emerald-600 rounded"
+                  />
+                  <label htmlFor="boundaryCheck" className="font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    বিদ্যালয়ে সীমানা প্রাচীর (Boundary Wall) বিদ্যমান রয়েছে
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    নিরাপদ খাবার পানির উৎস
+                  </label>
+                  <input
+                    type="text"
+                    value={infraForm.drinkingWaterSource || ''}
+                    onChange={(e) => setInfraForm({ ...infraForm, drinkingWaterSource: e.target.value })}
+                    placeholder="যেমন: গভীর নলকূপ ও আর্সেনিকমুক্ত ফিল্টার"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                {/* Sanitation Section */}
+                <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50/50 dark:bg-slate-800/40 space-y-2">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                    স্যানিটেশন ও টয়লেট সংখ্যা
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">ছাত্রদের</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={infraForm.sanitationBoys || 0}
+                        onChange={(e) => setInfraForm({ ...infraForm, sanitationBoys: parseInt(e.target.value) || 0 })}
+                        className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">ছাত্রীদের</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={infraForm.sanitationGirls || 0}
+                        onChange={(e) => setInfraForm({ ...infraForm, sanitationGirls: parseInt(e.target.value) || 0 })}
+                        className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-500 mb-0.5">শিক্ষকদের</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={infraForm.sanitationTeachers || 0}
+                        onChange={(e) => setInfraForm({ ...infraForm, sanitationTeachers: parseInt(e.target.value) || 0 })}
+                        className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    বিদ্যুৎ ও আইপিএস ব্যাকআপ স্ট্যাটাস
+                  </label>
+                  <input
+                    type="text"
+                    value={infraForm.electricityStatus || ''}
+                    onChange={(e) => setInfraForm({ ...infraForm, electricityStatus: e.target.value })}
+                    placeholder="যেমন: সক্রিয় পল্লী বিদ্যুৎ সংযোগ ও আইপিএস ব্যাকআপ"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    ইন্টারনেট ও ব্রডব্যান্ড সংযোগ স্ট্যাটাস
+                  </label>
+                  <input
+                    type="text"
+                    value={infraForm.internetStatus || ''}
+                    onChange={(e) => setInfraForm({ ...infraForm, internetStatus: e.target.value })}
+                    placeholder="যেমন: ওয়াইফাই ব্রডব্যান্ড ইন্টারনেট (১০ Mbps)"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>অবকাঠামো তথ্য সংরক্ষণ করুন</span>
+                </button>
+              </form>
+            </div>
+
+            {/* Room Directory & Inventory List */}
+            <div className="lg:col-span-7 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-600" />
+                    <span>বিদ্যালয়ের কক্ষ বিবরণী ও সরঞ্জাম ইনভেন্টরি</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    মোট কক্ষ: {toBanglaNumber(infraForm.rooms?.length || 0)} টি | বেঞ্চ, ফ্যান, লাইট ও অবস্থা
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 no-print">
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors"
+                  >
+                    <Printer className="w-4 h-4 text-slate-600" />
+                    <span>প্রিন্ট</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenAddRoom}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>নতুন কক্ষ যোগ করুন</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Room Type Filter Pills */}
+              <div className="flex flex-wrap gap-1.5 text-xs font-bold no-print">
+                {[
+                  { id: 'all', label: 'সকল কক্ষ' },
+                  { id: 'classroom', label: 'শ্রেণিকক্ষ' },
+                  { id: 'office', label: 'অফিস' },
+                  { id: 'lab', label: 'কম্পিউটার ল্যাব' },
+                  { id: 'library', label: 'লাইব্রেরি' },
+                  { id: 'teachers_room', label: 'শিক্ষক মিলনায়তন' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setRoomFilter(f.id)}
+                    className={`px-2.5 py-1 rounded-xl transition-all ${
+                      roomFilter === f.id
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Room List Table */}
+              <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300">
+                      <th className="p-2.5 text-center">কক্ষ নং</th>
+                      <th className="p-2.5">কক্ষের নাম ও ব্যবহার</th>
+                      <th className="p-2.5">তলা</th>
+                      <th className="p-2.5 text-center">ধারণক্ষমতা</th>
+                      <th className="p-2.5 text-center">সরঞ্জাম (বেঞ্চ/ফ্যান/লাইট)</th>
+                      <th className="p-2.5 text-center">অবস্থা</th>
+                      <th className="p-2.5 text-right no-print">অ্যাকশন</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {(infraForm.rooms || [])
+                      .filter((r) => roomFilter === 'all' || r.type === roomFilter)
+                      .map((room) => {
+                        const typeBadgeMap: Record<string, { label: string; color: string }> = {
+                          classroom: { label: 'শ্রেণিকক্ষ', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' },
+                          office: { label: 'অফিস', color: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300' },
+                          lab: { label: 'ডিজিটাল ল্যাব', color: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300' },
+                          library: { label: 'লাইব্রেরি', color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' },
+                          teachers_room: { label: 'শিক্ষক মিলনায়তন', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300' },
+                          common: { label: 'কমন রুম', color: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300' },
+                          storage: { label: 'স্টোর রুম', color: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' },
+                        };
+                        const badge = typeBadgeMap[room.type] || { label: 'অন্যান্য', color: 'bg-slate-100 text-slate-800' };
+
+                        return (
+                          <tr key={room.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                            <td className="p-2.5 text-center font-mono font-black text-emerald-600 dark:text-emerald-400">
+                              {toBanglaNumber(room.roomNo)}
+                            </td>
+                            <td className="p-2.5">
+                              <strong className="block text-slate-900 dark:text-white font-bold">{room.name}</strong>
+                              <span className={`inline-block text-[9.5px] font-bold px-1.5 py-0.2 rounded mt-0.5 ${badge.color}`}>
+                                {badge.label}
+                              </span>
+                            </td>
+                            <td className="p-2.5 text-slate-600 dark:text-slate-400 font-medium">
+                              {room.floor}
+                            </td>
+                            <td className="p-2.5 text-center font-bold text-slate-800 dark:text-slate-200">
+                              {toBanglaNumber(room.capacity)} জন
+                            </td>
+                            <td className="p-2.5 text-center text-slate-600 dark:text-slate-400">
+                              <span title="বেঞ্চ সংখ্যা">🪑 {toBanglaNumber(room.benchCount)}</span> |{' '}
+                              <span title="ফ্যান সংখ্যা">💨 {toBanglaNumber(room.fanCount)}</span> |{' '}
+                              <span title="লাইট সংখ্যা">💡 {toBanglaNumber(room.lightCount)}</span>
+                            </td>
+                            <td className="p-2.5 text-center">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  room.condition === 'good'
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                    : room.condition === 'moderate'
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                                }`}
+                              >
+                                {room.condition === 'good' ? 'ভালো' : room.condition === 'moderate' ? 'মাঝারি' : 'মেরামতযোগ্য'}
+                              </span>
+                            </td>
+                            <td className="p-2.5 text-right no-print">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleOpenEditRoom(room)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                  title="কক্ষ তথ্য সম্পাদনা"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRoom(room.id)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                  title="কক্ষ মুছে ফেলুন"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Room Modal */}
+      {isAddRoomOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+            <button
+              onClick={() => setIsAddRoomOpen(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  {editingRoomId ? 'কক্ষ বিবরণী পরিবর্তন ও সম্পাদনা' : 'নতুন কক্ষ যুক্ত করুন'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  কক্ষের নম্বর, ব্যবহার ও সরঞ্জামের বিবরণ পূরণ করুন
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveRoomModal} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    কক্ষ নম্বর *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={roomForm.roomNo}
+                    onChange={(e) => setRoomForm({ ...roomForm, roomNo: e.target.value })}
+                    placeholder="যেমন: ১০৫ বা ২০১"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    কক্ষের তলা / ফ্লোর *
+                  </label>
+                  <select
+                    value={roomForm.floor}
+                    onChange={(e) => setRoomForm({ ...roomForm, floor: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+                  >
+                    <option value="নিচতলা">নিচতলা</option>
+                    <option value="২য় তলা">২য় তলা</option>
+                    <option value="৩য় তলা">৩য় তলা</option>
+                    <option value="৪র্থ তলা">৪র্থ তলা</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  কক্ষের নাম বা ব্যবহার *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={roomForm.name}
+                  onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })}
+                  placeholder="যেমন: শ্রেণি কক্ষ - ৩য় শ্রেণি / প্রধান শিক্ষকের অফিস"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    ব্যবহারের ধরন *
+                  </label>
+                  <select
+                    value={roomForm.type}
+                    onChange={(e) => setRoomForm({ ...roomForm, type: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    <option value="classroom">শ্রেণিকক্ষ (Classroom)</option>
+                    <option value="office">অফিস কক্ষ (Office)</option>
+                    <option value="lab">কম্পিউটার/বিজ্ঞান ল্যাব (Lab)</option>
+                    <option value="library">লাইব্রেরি ও বুক কর্নার</option>
+                    <option value="teachers_room">শিক্ষক মিলনায়তন</option>
+                    <option value="common">কমন রুম</option>
+                    <option value="storage">স্টোর রুম</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    ধারণক্ষমতা (জন)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={roomForm.capacity}
+                    onChange={(e) => setRoomForm({ ...roomForm, capacity: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Inventories in room */}
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-3 bg-slate-50 dark:bg-slate-800/60 space-y-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200 block">
+                  কক্ষের সরঞ্জাম গণনা
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">বেঞ্চ সংখ্যা</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={roomForm.benchCount}
+                      onChange={(e) => setRoomForm({ ...roomForm, benchCount: parseInt(e.target.value) || 0 })}
+                      className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">সিলিং ফ্যান</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={roomForm.fanCount}
+                      onChange={(e) => setRoomForm({ ...roomForm, fanCount: parseInt(e.target.value) || 0 })}
+                      className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500 mb-0.5">লাইট/বাতি</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={roomForm.lightCount}
+                      onChange={(e) => setRoomForm({ ...roomForm, lightCount: parseInt(e.target.value) || 0 })}
+                      className="w-full p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  কক্ষের সার্বিক অবস্থা
+                </label>
+                <select
+                  value={roomForm.condition}
+                  onChange={(e) => setRoomForm({ ...roomForm, condition: e.target.value as any })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+                >
+                  <option value="good">ভালো (Good Condition)</option>
+                  <option value="moderate">মাঝারি (Moderate)</option>
+                  <option value="needs_repair">মেরামতযোগ্য (Needs Repair)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRoomOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20"
+                >
+                  {editingRoomId ? 'পরিবর্তন সংরক্ষণ করুন' : 'কক্ষ যোগ করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1.6: SCHOOL PHOTO GALLERY MANAGEMENT */}
+      {activeTab === 'gallery' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <Image className="w-5 h-5 text-emerald-600" />
+                <span>বিদ্যালয় ফটো গ্যালারি ও চিত্রশালা ব্যবস্থাপনা</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                পাবলিক ওয়েবসাইটে প্রদর্শিত মূল ক্যাম্পাস, শ্রেণিকক্ষ, কম্পিউটার ল্যাব ও বার্ষিক অনুষ্ঠানের ছবি পরিচালনা করুন
+              </p>
+            </div>
+
+            <button
+              onClick={handleOpenAddGallery}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ নতুন ছবি যুক্ত করুন</span>
+            </button>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap gap-2 text-xs font-bold">
+            {[
+              { id: 'all', label: `সকল ছবি (${galleryImages.length})` },
+              { id: 'campus', label: 'ক্যাম্পাস' },
+              { id: 'classroom', label: 'শ্রেণিকক্ষ' },
+              { id: 'lab', label: 'কম্পিউটার ল্যাব' },
+              { id: 'sports', label: 'বার্ষিক ক্রীড়া' },
+              { id: 'cultural', label: 'সাংস্কৃতিক' },
+              { id: 'other', label: 'অন্যান্য' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setGalleryFilter(f.id)}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  galleryFilter === f.id
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 border border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Gallery Admin Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {galleryImages
+              .filter((g) => galleryFilter === 'all' || g.category === galleryFilter)
+              .map((img) => (
+                <div
+                  key={img.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between group"
+                >
+                  <div className="w-full h-48 overflow-hidden relative bg-slate-100 dark:bg-slate-800">
+                    <img
+                      src={img.imageUrl}
+                      alt={img.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20">
+                      {img.category === 'campus'
+                        ? 'ক্যাম্পাস'
+                        : img.category === 'classroom'
+                        ? 'শ্রেণিকক্ষ'
+                        : img.category === 'lab'
+                        ? 'কম্পিউটার ল্যাব'
+                        : img.category === 'sports'
+                        ? 'বার্ষিক ক্রীড়া'
+                        : img.category === 'cultural'
+                        ? 'সাংস্কৃতিক'
+                        : 'অন্যান্য'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-900 dark:text-white line-clamp-1">
+                        {img.title}
+                      </h4>
+                      {img.caption && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
+                          {img.caption}
+                        </p>
+                      )}
+                      {img.date && (
+                        <p className="text-[10px] text-slate-400 font-mono mt-1">
+                          তারিখ: {img.date}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleOpenEditGallery(img)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>সম্পাদনা</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteGallery(img.id, img.title)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>মুছুন</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Gallery Modal */}
+      {isAddGalleryOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+            <button
+              onClick={() => setIsAddGalleryOpen(false)}
+              className="absolute top-5 right-5 p-1 rounded-xl text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center font-bold">
+                <Image className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                  {editingGalleryId ? 'গ্যালারির ছবির তথ্য সম্পাদনা' : 'নতুন ছবি যুক্ত করুন'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  পাবলিক পোর্টালের ফটো গ্যালারিতে প্রদর্শনের জন্য ছবি ও বিবরণ দিন
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveGalleryModal} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  ছবির শিরোনাম / নাম *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={galleryForm.title}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, title: e.target.value })}
+                  placeholder="যেমন: বার্ষিক ক্রীড়া প্রতিযোগিতা ও পুরষ্কার বিতরণ ২০২৬"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    ক্যাটাগরি *
+                  </label>
+                  <select
+                    value={galleryForm.category}
+                    onChange={(e) => setGalleryForm({ ...galleryForm, category: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                  >
+                    <option value="campus">মূল ক্যাম্পাস ভবন</option>
+                    <option value="classroom">শ্রেণিকক্ষ ও পাঠদান</option>
+                    <option value="lab">কম্পিউটার/বিজ্ঞান ল্যাব</option>
+                    <option value="sports">বার্ষিক ক্রীড়া ও প্রতিযোগিতা</option>
+                    <option value="cultural">সাংস্কৃতিক অনুষ্ঠান ও সমাবেশ</option>
+                    <option value="other">অন্যান্য কার্যক্রম</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    তারিখ
+                  </label>
+                  <input
+                    type="date"
+                    value={galleryForm.date || ''}
+                    onChange={(e) => setGalleryForm({ ...galleryForm, date: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Photo Upload & Preview */}
+              <div className="space-y-2 p-3.5 rounded-2xl border border-dashed border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20">
+                <span className="block font-bold text-slate-800 dark:text-slate-200">
+                  ছবি নির্বাচন করুন (ডিভাইস থেকে আপলোড বা ওয়েব লিংক) *
+                </span>
+
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <div className="w-24 h-24 rounded-xl border-2 border-emerald-500 overflow-hidden bg-white dark:bg-slate-800 shrink-0 flex items-center justify-center">
+                    {galleryForm.imageUrl ? (
+                      <img src={galleryForm.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-2 text-slate-400">
+                        <Image className="w-6 h-6 mx-auto mb-1 text-slate-400" />
+                        <span className="text-[9px] block">প্রিভিউ নেই</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 w-full space-y-2">
+                    <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer shadow-xs">
+                      <Upload className="w-4 h-4" />
+                      <span>গ্যালারি বা ক্যামেরা থেকে ছবি আপলোড</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleGalleryPhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">বা লিংক:</span>
+                      <input
+                        type="url"
+                        value={galleryForm.imageUrl}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, imageUrl: e.target.value })}
+                        placeholder="https://images.unsplash.com/photo-..."
+                        className="flex-1 px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  ছবির ক্যাপশন ও সংক্ষিপ্ত বিবরণ (ঐচ্ছিক)
+                </label>
+                <textarea
+                  rows={2}
+                  value={galleryForm.caption || ''}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value })}
+                  placeholder="ছবি সম্পর্কিত একটি ছোট ক্যাপশন লিখুন যা পাবলিক গ্যালারিতে দেখাবে..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddGalleryOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20"
+                >
+                  {editingGalleryId ? 'পরিবর্তন সংরক্ষণ করুন' : 'গ্যালারিতে যুক্ত করুন'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

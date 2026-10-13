@@ -23,7 +23,9 @@ import {
   Check,
   Settings2,
   Layers,
-  HelpCircle
+  HelpCircle,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 
 export const ResultView: React.FC = () => {
@@ -47,6 +49,12 @@ export const ResultView: React.FC = () => {
   const [selectedStudentForCard, setSelectedStudentForCard] = useState<Student | null>(null);
   const [cardPages, setCardPages] = useState<'1page' | '2page'>('1page');
   const [selectedSubjectForEntry, setSelectedSubjectForEntry] = useState<string>('all');
+
+  // Marks CSV Import State
+  const [isImportMarksModalOpen, setIsImportMarksModalOpen] = useState(false);
+  const [parsedMarksEntries, setParsedMarksEntries] = useState<(Omit<MarksEntry, 'id'> & { studentName?: string; subjectName?: string; roll?: number })[]>([]);
+  const [marksImportError, setMarksImportError] = useState('');
+  const [marksImportSuccess, setMarksImportSuccess] = useState('');
 
   // Selected distribution ID for entry grid
   const [activeDistId, setActiveDistId] = useState<string>(
@@ -149,6 +157,140 @@ export const ResultView: React.FC = () => {
     });
   };
 
+  const handleDownloadSampleMarksCSV = () => {
+    const headers = ['রোল,শিক্ষার্থীর নাম,বিষয়,রচনামূলক/লিখিত,নৈর্ব্যক্তিক/MCQ,শ্রেণি পরীক্ষা/CT'];
+    const sampleRows: string[] = [];
+    const targetStudents = classStudents.slice(0, 3);
+    const targetSubjects = classSubjects.slice(0, 3);
+
+    if (targetStudents.length > 0 && targetSubjects.length > 0) {
+      targetStudents.forEach((st) => {
+        targetSubjects.forEach((sub, subIdx) => {
+          const written = 40 + (st.roll * 2 + subIdx * 3) % 10;
+          const mcq = 22 + (st.roll + subIdx) % 7;
+          const ct = 16 + (st.roll + subIdx) % 4;
+          sampleRows.push(`"${st.roll}","${st.name}","${sub.name}","${written}","${mcq}","${ct}"`);
+        });
+      });
+    } else {
+      sampleRows.push('"১","তাহমিদ হাসান","বাংলা","৪৫","২৫","১৮"');
+      sampleRows.push('"১","তাহমিদ হাসান","ইংরেজি","৪২","২৪","১৭"');
+      sampleRows.push('"২","জান্নাতুল ফেরদৌস","বাংলা","৪৮","২৭","১৯"');
+    }
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers, ...sampleRows].join('\n');
+    const link = document.createElement('a');
+    link.href = encodeURI(csvContent);
+    const clsName = classes.find((c) => c.id === selectedClass)?.name || 'Class';
+    link.download = `sample_marks_template_${clsName}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handleFileSelectForMarksImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setMarksImportError('');
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text) return;
+
+        const lines = text.split(/\r\n|\n/).filter((l) => l.trim().length > 0);
+        if (lines.length < 2) {
+          setMarksImportError('CSV ফাইলে কোনো ফলাফলের তথ্য পাওয়া যায়নি!');
+          return;
+        }
+
+        const parseLine = (line: string): string[] => {
+          const result: string[] = [];
+          let cur = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+              inQuotes = !inQuotes;
+            } else if (ch === ',' && !inQuotes) {
+              result.push(cur.trim().replace(/^"|"$/g, ''));
+              cur = '';
+            } else {
+              cur += ch;
+            }
+          }
+          result.push(cur.trim().replace(/^"|"$/g, ''));
+          return result;
+        };
+
+        const parsed: (Omit<MarksEntry, 'id'> & { studentName?: string; subjectName?: string; roll?: number })[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = parseLine(lines[i]);
+          if (cols.length < 4) continue;
+
+          const rollVal = parseInt(cols[0]?.replace(/[^0-9]/g, ''));
+          const studentName = cols[1]?.trim();
+          const subjectName = cols[2]?.trim();
+          const writtenVal = parseFloat(cols[3]?.replace(/[^0-9.]/g, '')) || 0;
+          const mcqVal = parseFloat(cols[4]?.replace(/[^0-9.]/g, '')) || 0;
+          const ctVal = parseFloat(cols[5]?.replace(/[^0-9.]/g, '')) || 0;
+
+          const foundStudent = classStudents.find((s) => s.roll === rollVal || s.name.includes(studentName) || studentName.includes(s.name));
+          if (!foundStudent) continue;
+
+          const foundSubject = classSubjects.find((s) => s.name.includes(subjectName) || subjectName.includes(s.name)) || classSubjects[0];
+          if (!foundSubject) continue;
+
+          const total = writtenVal + mcqVal + ctVal;
+          const gradeInfo = calculateGrade(total, activeDistribution.totalMarks || 100);
+
+          parsed.push({
+            examId: selectedExam,
+            studentId: foundStudent.id,
+            classId: selectedClass,
+            subjectId: foundSubject.id,
+            writtenMarks: writtenVal,
+            continuousMarks: ctVal,
+            componentMarks: {
+              written: writtenVal,
+              mcq: mcqVal,
+              ct: ctVal,
+            },
+            totalMarks: total,
+            grade: gradeInfo.grade,
+            gradePoint: gradeInfo.point,
+            studentName: foundStudent.name,
+            subjectName: foundSubject.name,
+            roll: foundStudent.roll
+          });
+        }
+
+        if (parsed.length === 0) {
+          setMarksImportError('সঠিক ফরম্যাটের কোনো নম্বর শনাক্ত করা যায়নি। অনুগ্রহ করে রোল ও বিষয়ের নাম মিলিয়ে নিন।');
+        } else {
+          setParsedMarksEntries(parsed);
+        }
+      } catch (err) {
+        console.error(err);
+        setMarksImportError('CSV ফাইল পার্স করতে ত্রুটি হয়েছে।');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+
+  const handleConfirmMarksImport = () => {
+    if (parsedMarksEntries.length === 0) return;
+    bulkSaveMarks(parsedMarksEntries);
+    setMarksImportSuccess(`সফলভাবে ${toBanglaNumber(parsedMarksEntries.length)} টি বিষয়ের নম্বর ইমপোর্ট করা হয়েছে!`);
+    setTimeout(() => {
+      setMarksImportSuccess('');
+      setParsedMarksEntries([]);
+      setIsImportMarksModalOpen(false);
+    }, 1800);
+  };
+
   const handleExportExcel = () => {
     const headers = ['মেধাক্রম,রোল,নাম,মোট নম্বর,গড় নম্বর,জিপিএ (GPA),প্রাপ্ত গ্রেড'];
     const rows = studentResults.map((r, idx) => {
@@ -249,7 +391,30 @@ export const ResultView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Download Sample Marks CSV */}
+          <button
+            onClick={handleDownloadSampleMarksCSV}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+            title="নমুনা ফলাফল CSV ফরম্যাট ডাউনলোড করুন"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>নমুনা CSV</span>
+          </button>
+
+          {/* Import Marks from CSV */}
+          <button
+            onClick={() => {
+              setParsedMarksEntries([]);
+              setMarksImportError('');
+              setIsImportMarksModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-colors cursor-pointer"
+          >
+            <Upload className="w-4 h-4 text-emerald-600" />
+            <span>CSV ইমপোর্ট</span>
+          </button>
+
           <button
             onClick={handleExportExcel}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors cursor-pointer"
@@ -937,6 +1102,201 @@ export const ResultView: React.FC = () => {
                 <div className="border-t border-slate-400 pt-1 font-semibold">প্রধান শিক্ষকের স্বাক্ষর ও সিল</div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Marks CSV Import Modal with Sample Template and Live Sample Preview */}
+      {isImportMarksModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-white">
+                    CSV ফাইল থেকে পরীক্ষার ফলাফল ও নম্বর ইমপোর্ট করুন
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {exams.find((e) => e.id === selectedExam)?.name} • {classes.find((c) => c.id === selectedClass)?.name}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsImportMarksModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Instruction & Sample Download Banner */}
+            <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="space-y-1 text-xs">
+                <span className="font-bold text-purple-900 dark:text-purple-300 block flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4 text-purple-600" />
+                  <span>নমুনা ফলাফল CSV নির্দেশিকা</span>
+                </span>
+                <p className="text-[11px] text-purple-700 dark:text-purple-400">
+                  নিচের নমুনা CSV ফাইলে রোল, শিক্ষার্থীর নাম, বিষয় এবং বিভিন্ন অংশের (লিখিত, MCQ, CT) নম্বর পূরণ করে এখানে আপলোড করুন।
+                </p>
+              </div>
+
+              <button
+                onClick={handleDownloadSampleMarksCSV}
+                className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>নমুনা CSV ডাউনলোড</span>
+              </button>
+            </div>
+
+            {/* Live Visual Sample Table */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+                নমুনা CSV ফরম্যাট প্রিভিউ (সঠিক কলাম বিন্যাস):
+              </span>
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-x-auto text-[11px]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700">
+                      <th className="p-2 border-r border-slate-200 dark:border-slate-700">রোল</th>
+                      <th className="p-2 border-r border-slate-200 dark:border-slate-700">শিক্ষার্থীর নাম</th>
+                      <th className="p-2 border-r border-slate-200 dark:border-slate-700">বিষয়</th>
+                      <th className="p-2 border-r border-slate-200 dark:border-slate-700">রচনামূলক/লিখিত</th>
+                      <th className="p-2 border-r border-slate-200 dark:border-slate-700">নৈর্ব্যক্তিক/MCQ</th>
+                      <th className="p-2">শ্রেণি পরীক্ষা/CT</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-400">
+                    <tr>
+                      <td className="p-2 font-mono">১</td>
+                      <td className="p-2 font-bold text-slate-900 dark:text-slate-200">তাহমিদ হাসান</td>
+                      <td className="p-2 font-bold text-emerald-700 dark:text-emerald-400">বাংলা</td>
+                      <td className="p-2 font-mono">৪৫</td>
+                      <td className="p-2 font-mono">২৫</td>
+                      <td className="p-2 font-mono">১৮</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-mono">১</td>
+                      <td className="p-2 font-bold text-slate-900 dark:text-slate-200">তাহমিদ হাসান</td>
+                      <td className="p-2 font-bold text-emerald-700 dark:text-emerald-400">ইংরেজি</td>
+                      <td className="p-2 font-mono">৪২</td>
+                      <td className="p-2 font-mono">২৪</td>
+                      <td className="p-2 font-mono">১৭</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-mono">২</td>
+                      <td className="p-2 font-bold text-slate-900 dark:text-slate-200">জান্নাতুল ফেরদৌস</td>
+                      <td className="p-2 font-bold text-emerald-700 dark:text-emerald-400">বাংলা</td>
+                      <td className="p-2 font-mono">৪৮</td>
+                      <td className="p-2 font-mono">২৭</td>
+                      <td className="p-2 font-mono">১৯</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* File Upload Drop Area */}
+            <div className="p-5 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-center bg-slate-50 dark:bg-slate-800/50 space-y-2">
+              <Upload className="w-8 h-8 text-purple-600 mx-auto" />
+              <div className="text-xs">
+                <label className="font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer">
+                  <span>আপনার পূরণ করা নম্বরপত্র CSV ফাইল নির্বাচন করুন</span>
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleFileSelectForMarksImport}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[11px] text-slate-400 mt-1">UTF-8 এনকোডেড .csv ফাইল সাপোর্ট করে</p>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {marksImportError && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{marksImportError}</span>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {marksImportSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{marksImportSuccess}</span>
+              </div>
+            )}
+
+            {/* Parsed Preview Table */}
+            {parsedMarksEntries.length > 0 && (
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-purple-700 dark:text-purple-400">
+                    ✓ মোট {toBanglaNumber(parsedMarksEntries.length)} টি বিষয়ের নম্বর শনাক্ত হয়েছে:
+                  </span>
+                  <span className="text-slate-400 text-[11px]">নিচের প্রিভিউ যাচাই করুন</span>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl text-xs">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold sticky top-0">
+                        <th className="p-2">রোল</th>
+                        <th className="p-2">শিক্ষার্থী</th>
+                        <th className="p-2">বিষয়</th>
+                        <th className="p-2 text-center">লিখিত</th>
+                        <th className="p-2 text-center">MCQ</th>
+                        <th className="p-2 text-center">CT</th>
+                        <th className="p-2 text-center">মোট নম্বর</th>
+                        <th className="p-2 text-center">গ্রেড</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {parsedMarksEntries.slice(0, 10).map((m, i) => (
+                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                          <td className="p-2 font-mono font-bold">{toBanglaNumber(m.roll || i + 1)}</td>
+                          <td className="p-2 font-bold text-slate-900 dark:text-white">{m.studentName}</td>
+                          <td className="p-2 font-bold text-emerald-600">{m.subjectName}</td>
+                          <td className="p-2 text-center font-mono">{toBanglaNumber(m.writtenMarks)}</td>
+                          <td className="p-2 text-center font-mono">{toBanglaNumber(m.componentMarks?.mcq || 0)}</td>
+                          <td className="p-2 text-center font-mono">{toBanglaNumber(m.continuousMarks || 0)}</td>
+                          <td className="p-2 text-center font-bold text-slate-900 dark:text-white">{toBanglaNumber(m.totalMarks)}</td>
+                          <td className="p-2 text-center font-black text-emerald-700">{m.grade}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {parsedMarksEntries.length > 10 && (
+                    <div className="p-2 text-center text-[11px] text-slate-400 bg-slate-50 dark:bg-slate-800/40">
+                      ... আরও {toBanglaNumber(parsedMarksEntries.length - 10)} টি রেকর্ড অন্তর্ভুক্ত রয়েছে
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setParsedMarksEntries([])}
+                    className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+                  >
+                    পুনরায় নির্বাচন
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmMarksImport}
+                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md shadow-purple-600/20"
+                  >
+                    নম্বর ইমপোর্ট নিশ্চিত করুন ({toBanglaNumber(parsedMarksEntries.length)} টি)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

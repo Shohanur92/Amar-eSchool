@@ -154,9 +154,14 @@ export const CertificatesView: React.FC = () => {
           </div>
         </div>
 
-        {/* Memo & Date Row */}
-        <div className="flex justify-between items-center text-xs text-slate-700 mb-8 font-medium">
+        {/* Memo & Date Row + Student Photo if Available */}
+        <div className="flex justify-between items-center text-xs text-slate-700 mb-6 font-medium">
           <span>{memoNo}</span>
+          {student?.photoUrl && (
+            <div className="w-16 h-20 border-2 border-slate-700 rounded overflow-hidden shadow-xs bg-white">
+              <img src={student.photoUrl} alt={student.name} className="w-full h-full object-cover" />
+            </div>
+          )}
           <span>তারিখ: {formatBanglaDate(issueDate)}</span>
         </div>
 

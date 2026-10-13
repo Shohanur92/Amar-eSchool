@@ -321,10 +321,16 @@ export const ExamRoutineView: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Photo placeholder box */}
-                        <div className="w-16 h-20 border border-dashed border-slate-400 rounded flex items-center justify-center text-center p-1 text-[9px] text-slate-400 shrink-0">
-                          ছবি সংযুক্ত করুন
-                        </div>
+                        {/* Student Photo in Admit Card */}
+                        {st.photoUrl ? (
+                          <div className="w-16 h-20 border-2 border-slate-700 rounded overflow-hidden shrink-0 shadow-xs bg-white">
+                            <img src={st.photoUrl} alt={st.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-20 border border-dashed border-slate-400 rounded flex items-center justify-center text-center p-1 text-[9px] text-slate-400 shrink-0 bg-slate-50">
+                            ছবি সংযুক্ত করুন
+                          </div>
+                        )}
                       </div>
 
                       {/* Mini Routine Table */}

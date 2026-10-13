@@ -18,8 +18,37 @@ import {
   SmsLog,
   User,
   DeveloperInfo,
-  AppNotification
+  AppNotification,
+  SchoolInfrastructure,
+  SchoolEvent,
+  SchoolGalleryImage
 } from '../types';
+
+export const defaultInfrastructure: SchoolInfrastructure = {
+  buildingType: 'পাকা বহুতল ভবন (২ তলা)',
+  totalFloors: 2,
+  totalRooms: 10,
+  playGroundSize: '৬০ শতাংশ (সবুজ ঘাসের মাঠ)',
+  hasBoundaryWall: true,
+  drinkingWaterSource: 'গভীর নলকূপ ও আর্সেনিকমুক্ত ফিল্টার',
+  sanitationBoys: 4,
+  sanitationGirls: 4,
+  sanitationTeachers: 2,
+  electricityStatus: 'সক্রিয় পল্লী বিদ্যুৎ সংযোগ ও আইপিএস ব্যাকআপ',
+  internetStatus: 'ওয়াইফাই ব্রডব্যান্ড ইন্টারনেট (১০ Mbps)',
+  rooms: [
+    { id: 'rm_1', roomNo: '১০১', name: 'প্রধান শিক্ষকের কার্যালয়', type: 'office', floor: 'নিচতলা', capacity: 15, benchCount: 6, fanCount: 3, lightCount: 4, condition: 'good' },
+    { id: 'rm_2', roomNo: '১০২', name: 'শিক্ষক মিলনায়তন ও কনফারেন্স', type: 'teachers_room', floor: 'নিচতলা', capacity: 20, benchCount: 10, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_3', roomNo: '১০৩', name: 'শ্রেণি কক্ষ - প্লে ও নার্সারি', type: 'classroom', floor: 'নিচতলা', capacity: 35, benchCount: 12, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_4', roomNo: '১০৪', name: 'শ্রেণি কক্ষ - ১ম শ্রেণি', type: 'classroom', floor: 'নিচতলা', capacity: 40, benchCount: 14, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_5', roomNo: '২০১', name: 'শ্রেণি কক্ষ - ২য় শ্রেণি', type: 'classroom', floor: '২য় তলা', capacity: 40, benchCount: 14, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_6', roomNo: '২০২', name: 'শ্রেণি কক্ষ - ৩য় শ্রেণি', type: 'classroom', floor: '২য় তলা', capacity: 45, benchCount: 16, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_7', roomNo: '২০৩', name: 'শ্রেণি কক্ষ - ৪র্থ শ্রেণি', type: 'classroom', floor: '২য় তলা', capacity: 45, benchCount: 16, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_8', roomNo: '২০৪', name: 'শ্রেণি কক্ষ - ৫ম শ্রেণি', type: 'classroom', floor: '২য় তলা', capacity: 50, benchCount: 18, fanCount: 4, lightCount: 4, condition: 'good' },
+    { id: 'rm_9', roomNo: '২০৫', name: 'শেখ রাসেল ডিজিটাল কম্পিউটার ল্যাব', type: 'lab', floor: '২য় তলা', capacity: 30, benchCount: 15, fanCount: 4, lightCount: 6, condition: 'good' },
+    { id: 'rm_10', roomNo: '২০৬', name: 'বঙ্গবন্ধু ও মুক্তিযুদ্ধ কর্নার এবং লাইব্রেরি', type: 'library', floor: '২য় তলা', capacity: 25, benchCount: 10, fanCount: 3, lightCount: 4, condition: 'good' },
+  ]
+};
 
 export const initialSchoolSettings: SchoolSettings = {
   name: 'শাপলা আদর্শ প্রাথমিক বিদ্যালয়',
@@ -32,6 +61,7 @@ export const initialSchoolSettings: SchoolSettings = {
   email: 'msunkgschool@gmail.com',
   currentSession: '২০২৬',
   logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=150&auto=format&fit=crop&q=80',
+  infrastructure: defaultInfrastructure
 };
 
 export const initialClasses: SchoolClass[] = [
@@ -728,5 +758,69 @@ export const initialNotifications: AppNotification[] = [
     createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
     status: 'sent',
     readBySchoolIds: [],
+  },
+];
+
+export const initialSchoolEvents: SchoolEvent[] = [
+  { id: 'ev_1', title: 'নতুন শিক্ষাবর্ষের পাঠ্যপুস্তক উৎসব ও ক্লাস শুরু', date: '২০২৬-০১-০১', category: 'cultural', description: 'সকল শিক্ষার্থীর মাঝে নতুন পাঠ্যবই বিতরণ ও পরিচিতি সভা', isHoliday: false },
+  { id: 'ev_2', title: 'পবিত্র শব-ই-বরাত ছুটি', date: '২০২৬-০২-০৪', category: 'holiday', description: 'ধর্মীয় পবিত্র দিবস উপলক্ষে বিদ্যালয় বন্ধ', isHoliday: true },
+  { id: 'ev_3', title: 'আন্তর্জাতিক মাতৃভাষা ও শহীদ দিবস', date: '২০২৬-০২-২১', category: 'national', description: 'প্রভাতফেরি, পুষ্পস্তবক অর্পণ ও চিত্রাঙ্কন প্রতিযোগিতা', isHoliday: true },
+  { id: 'ev_4', title: '১ম প্রান্তিক মূল্যায়ন / টিউটোরিয়াল পরীক্ষা শুরু', date: '২০২৬-০৩-১৫', endDate: '২০২৬-০৩-২২', category: 'exam', description: 'সকল শ্রেণির ১ম সাময়িক পরীক্ষা', isHoliday: false },
+  { id: 'ev_5', title: 'মহান স্বাধীনতা ও জাতীয় দিবস', date: '২০২৬-০৩-২৬', category: 'national', description: 'জাতীয় পতাকা উত্তোলন, কুচকাওয়াজ ও আলোচনা সভা', isHoliday: true },
+  { id: 'ev_6', title: 'পবিত্র রমজান ও ঈদুল ফিতরের ছুটি', date: '২০২৬-০৩-২০', endDate: '২০২৬-০৪-০৫', category: 'holiday', description: 'পবিত্র রমজান ও ঈদুল ফিতর উপলক্ষে সাধারণ ছুটি', isHoliday: true },
+  { id: 'ev_7', title: 'বাংলা নববর্ষ ১৪৩৩ (পহেলা বৈশাখ)', date: '২০২৬-০৪-১৪', category: 'cultural', description: 'বৈশাখী মঙ্গল শোভাযাত্রা ও সাংস্কৃতিক অনুষ্ঠান', isHoliday: true },
+  { id: 'ev_8', title: 'অর্ধবার্ষিক মূল্যায়ন পরীক্ষা ২০২৬', date: '২০২৬-০৬-১০', endDate: '২০২৬-০৬-২৫', category: 'exam', description: 'সকল শ্রেণির অর্ধবার্ষিক লিখিত ও ব্যবহারিক পরীক্ষা', isHoliday: false },
+  { id: 'ev_9', title: 'বার্ষিক ক্রীড়া প্রতিযোগিতা ও সাংস্কৃতিক উৎসব', date: '২০২৬-১০-১৫', category: 'sports', description: 'বিদ্যালয় প্রাঙ্গণে বার্ষিক ক্রীড়া প্রতিযোগিতা ও পুরস্কার বিতরণ', isHoliday: false },
+  { id: 'ev_10', title: 'বার্ষিক চূড়ান্ত মূল্যায়ন ও ফলাফল প্রকাশ', date: '২০২৬-১২-০৫', endDate: '২০২৬-১২-২০', category: 'exam', description: 'শিক্ষাবর্ষ ২০২৬ এর সমাপনী মূল্যায়ন ও ফলাফল বিতরণ', isHoliday: false },
+];
+
+export const initialGalleryImages: SchoolGalleryImage[] = [
+  {
+    id: 'gal_1',
+    title: 'বিদ্যালয়ের নান্দনিক মূল ক্যাম্পাস ও প্রবেশদ্বার',
+    category: 'campus',
+    imageUrl: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=80',
+    caption: 'সবুজ ছায়াঘেরা পরিবেশে আধুনিক সুযোগ-সুবিধা সম্বলিত আমাদের মূল ক্যাম্পাস ভবন।',
+    date: '২০২৬-০১-১০',
+  },
+  {
+    id: 'gal_2',
+    title: 'আধুনিক স্মার্ট ক্লাসরুমে আনন্দঘন পাঠদান',
+    category: 'classroom',
+    imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=80',
+    caption: 'মাল্টিমিডিয়া প্রজেক্টর ও সক্রিয় অংশগ্রহণে শিক্ষার্থীদের প্রতিদিনের শিখন কার্যক্রম।',
+    date: '২০২৬-০১-১৫',
+  },
+  {
+    id: 'gal_3',
+    title: 'শেখ রাসেল ডিজিটাল কম্পিউটার ল্যাব',
+    category: 'lab',
+    imageUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80',
+    caption: 'আইসিটি শিক্ষা ও ব্যবহারিক প্রশিক্ষণের জন্য সুসজ্জিত অত্যাধুনিক কম্পিউটার ল্যাব।',
+    date: '২০২৬-০২-০১',
+  },
+  {
+    id: 'gal_4',
+    title: 'সমৃদ্ধ লাইব্রেরি ও শিক্ষার্থীদের অধ্যয়ন কক্ষ',
+    category: 'classroom',
+    imageUrl: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1200&q=80',
+    caption: 'হাজারো শিক্ষামূলক বই ও গবেষণামূলক সাময়িকীতে সমৃদ্ধ আমাদের বিদ্যালয় গ্রন্থাগার।',
+    date: '২০২৬-০২-১০',
+  },
+  {
+    id: 'gal_5',
+    title: 'বার্ষিক ক্রীড়া প্রতিযোগিতা ও পুরস্কার বিতরণী',
+    category: 'sports',
+    imageUrl: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1200&q=80',
+    caption: 'সবুজ খেলার মাঠে শিক্ষার্থীদের স্বতঃস্ফূর্ত দৌড় ও ক্রীড়া নৈপুণ্য প্রদর্শন।',
+    date: '২০২৬-০২-১৮',
+  },
+  {
+    id: 'gal_6',
+    title: 'প্রতিদিনের প্রাত্যহিক সমাবেশ ও জাতীয় সংগীত',
+    category: 'cultural',
+    imageUrl: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1200&q=80',
+    caption: 'শৃঙ্খলা ও দেশপ্রেমের চেতনায় নিয়মিত প্রাত্যহিক সমাবেশ ও শপথ বাক্য পাঠ।',
+    date: '২০২৬-০২-২৫',
   },
 ];

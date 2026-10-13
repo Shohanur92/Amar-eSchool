@@ -18,6 +18,7 @@ import { LiveRoutineView } from './components/views/LiveRoutineView';
 import { FeesView } from './components/views/FeesView';
 import { CertificatesView } from './components/views/CertificatesView';
 import { NoticeView } from './components/views/NoticeView';
+import { CalendarEventsView } from './components/views/CalendarEventsView';
 import { HomeworkView } from './components/views/HomeworkView';
 import { CompetencyView } from './components/views/CompetencyView';
 import { AdmissionRegisterView } from './components/views/AdmissionRegisterView';
@@ -72,6 +73,8 @@ const MainLayout: React.FC = () => {
         return <CertificatesView />;
       case 'notices':
         return <NoticeView />;
+      case 'calendar':
+        return <CalendarEventsView />;
       case 'homework':
         return <HomeworkView />;
       case 'competency':

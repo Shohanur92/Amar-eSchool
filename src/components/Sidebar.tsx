@@ -9,6 +9,7 @@ import {
   GraduationCap,
   FileSpreadsheet,
   CalendarDays,
+  Calendar,
   Receipt,
   Award,
   Bell,
@@ -50,6 +51,7 @@ const navItems: NavItem[] = [
 
   // Academic
   { id: 'students', labelBn: 'শিক্ষার্থী ব্যবস্থাপনা', labelEn: 'Student Management', icon: Users, category: 'academic' },
+  { id: 'calendar', labelBn: 'একাডেমিক ক্যালেন্ডার ও ইভেন্ট', labelEn: 'Academic Calendar & Events', icon: Calendar, category: 'academic' },
   { id: 'stipend', labelBn: 'ভর্তি ও উপবৃত্তি রেজিস্টার', labelEn: 'Admission & Stipend', icon: BookOpenCheck, category: 'academic' },
   { id: 'class_routine', labelBn: 'স্মার্ট ক্লাস রুটিন', labelEn: 'Smart Class Routine', icon: CalendarDays, category: 'academic' },
   { id: 'homework', labelBn: 'হোমওয়ার্ক ডায়েরি', labelEn: 'Homework Diary', icon: BookMarked, category: 'academic' },
