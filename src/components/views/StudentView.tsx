@@ -1,0 +1,744 @@
+import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import { Student } from '../../types';
+import { toBanglaNumber } from '../../utils/bengaliUtils';
+import {
+  Users,
+  UserPlus,
+  Search,
+  Filter,
+  Download,
+  Upload,
+  Edit,
+  Trash2,
+  X,
+  Check,
+  IdCard,
+  Printer,
+  ArrowRight,
+  Sparkles,
+  PhoneCall,
+  MapPin,
+  Calendar
+} from 'lucide-react';
+
+export const StudentView: React.FC = () => {
+  const {
+    students,
+    classes,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    promoteStudents,
+    settings,
+    currentUser
+  } = useApp();
+
+  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState<boolean>(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [idCardStudent, setIdCardStudent] = useState<Student | null>(null);
+
+  // Promotion state
+  const [promoteFrom, setPromoteFrom] = useState<string>(classes[2]?.id || 'c_1');
+  const [promoteTo, setPromoteTo] = useState<string>(classes[3]?.id || 'c_2');
+  const [promotionSuccessMsg, setPromotionSuccessMsg] = useState<string>('');
+
+  // Form state
+  const [formData, setFormData] = useState<Partial<Student>>({
+    name: '',
+    nameEn: '',
+    classId: classes[2]?.id || 'c_1',
+    section: 'ক',
+    roll: 1,
+    gender: 'ছেলে',
+    dob: '2018-01-01',
+    fatherName: '',
+    motherName: '',
+    guardianPhone: '',
+    address: '',
+    bloodGroup: 'A+',
+    birthRegNo: '',
+    admissionNo: `২০২৬-${Math.floor(100 + Math.random() * 900)}`,
+    admissionDate: new Date().toISOString().split('T')[0],
+    isStipendBeneficiary: true,
+    status: 'active',
+  });
+
+  const filteredStudents = students.filter((s) => {
+    const matchesClass = selectedClass === 'all' || s.classId === selectedClass;
+    const matchesSearch =
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(s.roll).includes(searchQuery) ||
+      toBanglaNumber(s.roll).includes(searchQuery) ||
+      s.guardianPhone.includes(searchQuery);
+    return matchesClass && matchesSearch;
+  });
+
+  const handleOpenAdd = () => {
+    setEditingStudent(null);
+    setFormData({
+      name: '',
+      nameEn: '',
+      classId: selectedClass !== 'all' ? selectedClass : (classes[2]?.id || 'c_1'),
+      section: 'ক',
+      roll: (students.filter(s => s.classId === (selectedClass !== 'all' ? selectedClass : 'c_1')).length + 1),
+      gender: 'ছেলে',
+      dob: '2018-01-01',
+      fatherName: '',
+      motherName: '',
+      guardianPhone: '',
+      address: '',
+      bloodGroup: 'A+',
+      birthRegNo: '',
+      admissionNo: `২০২৬-${Math.floor(100 + Math.random() * 900)}`,
+      admissionDate: new Date().toISOString().split('T')[0],
+      isStipendBeneficiary: true,
+      status: 'active',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (student: Student) => {
+    setEditingStudent(student);
+    setFormData(student);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingStudent) {
+      updateStudent(editingStudent.id, formData);
+    } else {
+      addStudent(formData as Omit<Student, 'id'>);
+    }
+    setIsModalOpen(false);
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`আপনি কি নিশ্চিতভাবে "${name}" শিক্ষার্থীর তথ্য মুছে ফেলতে চান?`)) {
+      deleteStudent(id);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['রোল,ভর্তি নং,নাম,ইংরেজি নাম,শ্রেণি,শাখা,লিঙ্গ,অভিভাবকের মোবাইল,পিতার নাম,মাতার নাম,ঠিকানা,জন্ম নিবন্ধন'];
+    const rows = filteredStudents.map((s) => {
+      const clsName = classes.find((c) => c.id === s.classId)?.name || '';
+      return `"${s.roll}","${s.admissionNo}","${s.name}","${s.nameEn}","${clsName}","${s.section}","${s.gender}","${s.guardianPhone}","${s.fatherName}","${s.motherName}","${s.address}","${s.birthRegNo}"`;
+    });
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers, ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `shiksharthi_list_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handlePromote = (e: React.FormEvent) => {
+    e.preventDefault();
+    promoteStudents(promoteFrom, promoteTo);
+    const fromName = classes.find((c) => c.id === promoteFrom)?.name;
+    const toName = classes.find((c) => c.id === promoteTo)?.name;
+    setPromotionSuccessMsg(`সফলভাবে ${fromName} এর সকল শিক্ষার্থীকে ${toName} এ প্রমোশন দেওয়া হয়েছে!`);
+    setTimeout(() => {
+      setPromotionSuccessMsg('');
+      setIsPromoteModalOpen(false);
+    }, 1800);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Controls Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-emerald-600" />
+            <span>শিক্ষার্থী ব্যবস্থাপনা ও ভর্তি রেজিস্টার</span>
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            মোট শিক্ষার্থী: {toBanglaNumber(students.length)} জন (প্লে থেকে ৫ম শ্রেণি)
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-colors"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>CSV এক্সপোর্ট</span>
+          </button>
+
+          <button
+            onClick={() => setIsPromoteModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-bold transition-colors"
+          >
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span>শ্রেণি প্রমোশন</span>
+          </button>
+
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>নতুন শিক্ষার্থী ভর্তি</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-center gap-3">
+        {/* Class Filter */}
+        <div className="w-full sm:w-60 flex items-center gap-2">
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+          >
+            <option value="all">সকল শ্রেণি (সবগুলো দেখুন)</option>
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name} ({cls.nameEn})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Search Input */}
+        <div className="w-full flex-1 relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="নাম, রোল, অভিভাবকের মোবাইল নম্বর দিয়ে খুঁজুন..."
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+          />
+        </div>
+      </div>
+
+      {/* Students Data Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+                <th className="p-3 text-center w-14">রোল</th>
+                <th className="p-3">শিক্ষার্থীর নাম</th>
+                <th className="p-3">শ্রেণি ও শাখা</th>
+                <th className="p-3">পিতা ও মাতার নাম</th>
+                <th className="p-3">অভিভাবকের মোবাইল</th>
+                <th className="p-3">উপবৃত্তি স্ট্যাটাস</th>
+                <th className="p-3 text-center">আইডি কার্ড</th>
+                <th className="p-3 text-right">কার্যক্রম</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map((student) => {
+                  const cls = classes.find((c) => c.id === student.classId);
+                  return (
+                    <tr
+                      key={student.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="p-3 text-center font-bold text-slate-900 dark:text-white">
+                        <span className="w-7 h-7 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-xs">
+                          {toBanglaNumber(student.roll)}
+                        </span>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="font-extrabold text-slate-900 dark:text-white text-xs">
+                          {student.name}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-medium">
+                          {student.nameEn} • {student.gender}
+                        </div>
+                      </td>
+
+                      <td className="p-3">
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                          {cls?.name || 'অনির্ধারিত'}
+                        </span>
+                        <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                          শাখা: {student.section}
+                        </span>
+                      </td>
+
+                      <td className="p-3">
+                        <div className="text-slate-700 dark:text-slate-300 font-medium">
+                          {student.fatherName || '—'}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          মাতা: {student.motherName || '—'}
+                        </div>
+                      </td>
+
+                      <td className="p-3 font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                        {student.guardianPhone}
+                      </td>
+
+                      <td className="p-3">
+                        {student.isStipendBeneficiary ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            উপবৃত্তি প্রাপক
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            সাধারণ
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => setIdCardStudent(student)}
+                          className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 text-[11px] font-bold flex items-center justify-center gap-1 mx-auto"
+                        >
+                          <IdCard className="w-3.5 h-3.5" />
+                          <span>আইডি</span>
+                        </button>
+                      </td>
+
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(student)}
+                            className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            title="সম্পাদনা"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(student.id, student.name)}
+                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                            title="মুছুন"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-slate-400 text-xs">
+                    কোন শিক্ষার্থী খুঁজে পাওয়া যায়নি।
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Student Admission / Edit Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-4">
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-emerald-600" />
+                <span>{editingStudent ? 'শিক্ষার্থীর তথ্য সম্পাদনা' : 'নতুন শিক্ষার্থী ভর্তি ফরম'}</span>
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    শিক্ষার্থীর নাম (বাংলায়) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name || ''}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                    placeholder="যেমন: মো: আব্দুল্লাহ"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Student Name (English) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.nameEn || ''}
+                    onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                    placeholder="e.g. Md. Abdullah"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    শ্রেণি *
+                  </label>
+                  <select
+                    value={formData.classId}
+                    onChange={(e) => setFormData({ ...formData, classId: e.target.value })}
+                    className="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {classes.map((cls) => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    শাখা *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.section || 'ক'}
+                    onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    শ্রেণি রোল *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={formData.roll || 1}
+                    onChange={(e) => setFormData({ ...formData, roll: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    লিঙ্গ *
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
+                    className="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="ছেলে">ছেলে</option>
+                    <option value="মেয়ে">মেয়ে</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    পিতার নাম
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.fatherName || ''}
+                    onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    মাতার নাম
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.motherName || ''}
+                    onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    অভিভাবকের মোবাইল নম্বর *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.guardianPhone || ''}
+                    onChange={(e) => setFormData({ ...formData, guardianPhone: e.target.value })}
+                    placeholder="০১৭১১-XXXXXX"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    জন্ম তারিখ
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.dob || '2018-01-01'}
+                    onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    রক্তের গ্রুপ
+                  </label>
+                  <select
+                    value={formData.bloodGroup || 'A+'}
+                    onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  জন্ম নিবন্ধন সনদ নম্বর (১৭ ডিজিট)
+                </label>
+                <input
+                  type="text"
+                  value={formData.birthRegNo || ''}
+                  onChange={(e) => setFormData({ ...formData, birthRegNo: e.target.value })}
+                  placeholder="২০১৫২৬৯২৬১১০XXXXX"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  বর্তমান ঠিকানা
+                </label>
+                <input
+                  type="text"
+                  value={formData.address || ''}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="গ্রাম/রোড, পোস্ট অফিস, থানা, জেলা"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="stipendCheck"
+                  checked={formData.isStipendBeneficiary}
+                  onChange={(e) => setFormData({ ...formData, isStipendBeneficiary: e.target.checked })}
+                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                />
+                <label htmlFor="stipendCheck" className="font-bold text-slate-700 dark:text-slate-300">
+                  উপবৃত্তি সুবিধাভোগী তালিকাভুক্ত শিক্ষার্থী
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20"
+                >
+                  {editingStudent ? 'হালনাগাদ সম্পন্ন করুন' : 'ভর্তি নিশ্চিত করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Class Promotion Modal */}
+      {isPromoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+            <button
+              onClick={() => setIsPromoteModalOpen(false)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                  স্বয়ংক্রিয় শ্রেণি প্রমোশন
+                </h3>
+                <p className="text-xs text-slate-500">পরবর্তী সেশনে উত্তীর্ণ করার টুল</p>
+              </div>
+            </div>
+
+            {promotionSuccessMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold text-center">
+                {promotionSuccessMsg}
+              </div>
+            )}
+
+            <form onSubmit={handlePromote} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  বর্তমান শ্রেণি:
+                </label>
+                <select
+                  value={promoteFrom}
+                  onChange={(e) => setPromoteFrom(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                >
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name} ({students.filter((s) => s.classId === cls.id).length} জন শিক্ষার্থী)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="text-center py-1">
+                <ArrowRight className="w-5 h-5 text-purple-600 mx-auto" />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  উত্তীর্ণ বা প্রমোটেড শ্রেণি:
+                </label>
+                <select
+                  value={promoteTo}
+                  onChange={(e) => setPromoteTo(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                >
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl text-[11px] text-amber-800 dark:text-amber-300">
+                ⚠️ নিশ্চিতকরণ: উক্ত শ্রেণির সকল সক্রিয় শিক্ষার্থীর শ্রেণি এক ক্লিকে আপডেট করা হবে।
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md shadow-purple-600/20"
+              >
+                প্রমোশন নিশ্চিত করুন
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Student ID Card Modal Preview */}
+      {idCardStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+            <button
+              onClick={() => setIdCardStudent(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-slate-600 no-print"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-4 no-print">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-white">ডিজিটাল আইডি কার্ড প্রিভিউ</h4>
+            </div>
+
+            {/* Printable ID Card */}
+            <div className="w-full rounded-2xl border-2 border-emerald-600 bg-white text-slate-900 overflow-hidden shadow-md">
+              <div className="bg-gradient-to-r from-emerald-700 to-teal-800 p-3 text-center text-white">
+                <p className="text-[10px] tracking-wide uppercase opacity-80">{settings.code}</p>
+                <h5 className="font-black text-xs">{settings.name}</h5>
+                <p className="text-[9px] text-emerald-100">{settings.address}</p>
+              </div>
+
+              <div className="p-4 text-center">
+                <div className="w-20 h-20 mx-auto rounded-full bg-slate-100 border-2 border-emerald-500 flex items-center justify-center font-bold text-2xl text-emerald-700 mb-2">
+                  {idCardStudent.name.charAt(0)}
+                </div>
+
+                <h4 className="font-extrabold text-sm text-slate-900">{idCardStudent.name}</h4>
+                <p className="text-[11px] text-slate-500 font-medium">{idCardStudent.nameEn}</p>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 text-left bg-slate-50 p-2.5 rounded-xl text-[11px]">
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">শ্রেণি:</span>
+                    <strong className="text-slate-800">
+                      {classes.find((c) => c.id === idCardStudent.classId)?.name}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">রোল নং:</span>
+                    <strong className="text-slate-800">{toBanglaNumber(idCardStudent.roll)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">রক্তের গ্রুপ:</span>
+                    <strong className="text-rose-600">{idCardStudent.bloodGroup || '—'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">জরুরি ফোন:</span>
+                    <strong className="text-slate-800 font-mono text-[10px]">{idCardStudent.guardianPhone}</strong>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-2 border-t border-slate-200 flex justify-between items-center text-[10px]">
+                  <span className="text-slate-400">সেশন: ২০২৬</span>
+                  <div className="text-center">
+                    <div className="font-signature font-bold text-slate-700 text-xs">Motiur</div>
+                    <span className="text-slate-500 border-t border-slate-300 pt-0.5 block">প্রধান শিক্ষক</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex gap-2 no-print">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+              >
+                <Printer className="w-4 h-4" />
+                <span>প্রিন্ট করুন</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
