@@ -157,10 +157,30 @@ export const SecurityBackupView: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Handle Head Teacher Photo Upload
+  const handleHeadTeacherPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      alert('ছবির সাইজ সর্বোচ্চ ৩ মেগাবাইট হতে পারবে!');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setProfileForm((prev) => ({ ...prev, headTeacherPhoto: dataUrl }));
+      updateSettings({ headTeacherPhoto: dataUrl });
+      setSuccessMsg('প্রধান শিক্ষকের পোর্ট্রেট ছবি সফলভাবে সংরক্ষিত হয়েছে!');
+      setTimeout(() => setSuccessMsg(''), 3500);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings(profileForm);
-    setSuccessMsg('বিদ্যালয় প্রোফাইল ও তথ্যাবলি সফলভাবে সংরক্ষিত হয়েছে!');
+    setSuccessMsg('বিদ্যালয় প্রোফাইল ও প্রধান শিক্ষকের বাণী সফলভাবে সংরক্ষিত হয়েছে!');
     setTimeout(() => setSuccessMsg(''), 3500);
   };
 
@@ -599,14 +619,91 @@ export const SecurityBackupView: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold mb-1">প্রধান শিক্ষকের নাম</label>
-                <input
-                  type="text"
-                  value={profileForm.headTeacherName}
-                  onChange={(e) => setProfileForm({ ...profileForm, headTeacherName: e.target.value })}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
-                />
+              {/* Head Teacher Section with Custom Bani */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/40 dark:from-emerald-950/30 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/60 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>প্রধান শিক্ষকের পরিচিতি ও অফিশিয়াল বাণী (পাবলিক পোর্টালে প্রদর্শিত হবে)</span>
+                  </h4>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 font-bold">
+                    কাস্টমাইজেশন
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">প্রধান শিক্ষকের নাম *</label>
+                    <input
+                      type="text"
+                      required
+                      value={profileForm.headTeacherName}
+                      onChange={(e) => setProfileForm({ ...profileForm, headTeacherName: e.target.value })}
+                      placeholder="যেমন: মো: মতিউর রহমান"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1 text-slate-700 dark:text-slate-300">পদবী / ডেজিগনেশন</label>
+                    <input
+                      type="text"
+                      value={profileForm.headTeacherDesignation || 'প্রধান শিক্ষক'}
+                      onChange={(e) => setProfileForm({ ...profileForm, headTeacherDesignation: e.target.value })}
+                      placeholder="যেমন: প্রধান শিক্ষক / অধ্যক্ষ"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
+                    />
+                  </div>
+                </div>
+
+                {/* Head Teacher Photo Upload & Preview */}
+                <div className="flex items-center gap-3 p-3 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-emerald-100 dark:border-slate-700">
+                  <div className="w-14 h-14 rounded-xl border-2 border-emerald-500 overflow-hidden bg-slate-100 shrink-0 flex items-center justify-center">
+                    {profileForm.headTeacherPhoto ? (
+                      <img src={profileForm.headTeacherPhoto} alt="Head Teacher" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">👨‍🏫</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      প্রধান শিক্ষকের পোর্ট্রেট ছবি
+                    </span>
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] cursor-pointer shadow-xs">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>ছবি আপলোড করুন</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleHeadTeacherPhotoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Custom Head Teacher Message / Bani */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-slate-800 dark:text-slate-200">
+                      প্রধান শিক্ষকের বাণী (Message from Head Teacher) *
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {(profileForm.headTeacherMessage || '').length} অক্ষর
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    required
+                    value={profileForm.headTeacherMessage || ''}
+                    onChange={(e) => setProfileForm({ ...profileForm, headTeacherMessage: e.target.value })}
+                    placeholder="প্রধান শিক্ষকের বাণী এখানে লিখুন... যেমন: সুশিক্ষা জাতির মেরুদণ্ড। আদর্শ নাগরিক হিসেবে শিক্ষার্থীদের গড়ে তুলতে পাঠ্যপুস্তকের পাশাপাশি আমরা নৈতিক শিক্ষা..."
+                    className="w-full p-3 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white leading-relaxed font-medium"
+                  ></textarea>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    💡 এই বাণীটি পাবলিক লগআউট পেজের ওয়েলকাম সেকশনে "প্রধান শিক্ষকের বাণী" কার্ডে সরাসরি প্রদর্শিত হবে।
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -643,9 +740,10 @@ export const SecurityBackupView: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20"
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.01]"
               >
-                তথ্যাবলি ও লোগো সংরক্ষণ করুন
+                <Check className="w-4 h-4" />
+                <span>প্রধান শিক্ষকের বাণী ও বিদ্যালয় প্রোফাইল সংরক্ষণ করুন</span>
               </button>
             </form>
           </div>
@@ -1285,39 +1383,36 @@ export const SecurityBackupView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="p-4 space-y-2 flex-1 flex flex-col justify-between">
+                  <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                     <div>
-                      <h4 className="font-extrabold text-sm text-slate-900 dark:text-white line-clamp-1">
-                        {img.title}
-                      </h4>
-                      {img.caption && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
-                          {img.caption}
-                        </p>
-                      )}
-                      {img.date && (
-                        <p className="text-[10px] text-slate-400 font-mono mt-1">
-                          তারিখ: {img.date}
-                        </p>
-                      )}
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-3 leading-relaxed">
+                        {img.caption || img.title}
+                      </p>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenEditGallery(img)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        <Edit className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>সম্পাদনা</span>
-                      </button>
+                    <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        <span>Google Drive সংরক্ষিত</span>
+                      </span>
 
-                      <button
-                        onClick={() => handleDeleteGallery(img.id, img.title)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>মুছুন</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditGallery(img)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <Edit className="w-3 h-3 text-emerald-600" />
+                          <span>ক্যাপশন এডিট</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteGallery(img.id, img.caption || img.title)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>মুছুন</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -21,6 +21,9 @@ export interface SchoolSettings {
   code: string; // EIIN / EMIS code
   address: string;
   headTeacherName: string;
+  headTeacherDesignation?: string;
+  headTeacherMessage?: string;
+  headTeacherPhoto?: string;
   contactNumber: string;
   email: string;
   logoUrl?: string;

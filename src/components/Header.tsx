@@ -67,19 +67,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu, onOpenLogin })
       <div className="px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 max-w-[1600px] mx-auto">
         {/* Left: Mobile hamburger & School Logo & Branding */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <button
-            onClick={onOpenMobileMenu}
-            className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-            aria-label="Toggle menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {currentUser && (
+            <button
+              onClick={onOpenMobileMenu}
+              className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              aria-label="Toggle menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
 
           {/* School Logo with hoverable Quick Edit / Upload trigger */}
           <div className="relative group shrink-0">
             <div
-              onClick={() => setIsLogoModalOpen(true)}
-              title="বিদ্যালয়ের লোগো পরিবর্তন বা আপলোড করতে ক্লিক করুন"
+              onClick={() => {
+                if (currentUser) {
+                  setIsLogoModalOpen(true);
+                } else {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              title={currentUser ? "বিদ্যালয়ের লোগো পরিবর্তন বা আপলোড করতে ক্লিক করুন" : settings.name}
               className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold shadow-sm ring-1 ring-emerald-500/30 overflow-hidden cursor-pointer relative transition-transform hover:scale-105"
             >
               {settings.logoUrl ? (
@@ -88,22 +96,32 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu, onOpenLogin })
                 <span className="text-xl">🏫</span>
               )}
 
-              {/* Hover Overlay Camera Badge */}
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="w-4 h-4 text-emerald-300" />
-              </div>
+              {/* Hover Overlay Camera Badge (only for logged in admins) */}
+              {currentUser && (
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Camera className="w-4 h-4 text-emerald-300" />
+                </div>
+              )}
             </div>
 
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] shadow-xs border border-white dark:border-slate-900 pointer-events-none">
-              ✎
-            </span>
+            {currentUser && (
+              <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] shadow-xs border border-white dark:border-slate-900 pointer-events-none">
+                ✎
+              </span>
+            )}
           </div>
 
           {/* School Name & Multi-School Switcher */}
           <div className="relative min-w-0">
             <div className="flex items-center gap-1.5">
               <div
-                onClick={() => setCurrentView('dashboard')}
+                onClick={() => {
+                  if (currentUser) {
+                    setCurrentView('dashboard');
+                  } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
                 className="cursor-pointer select-none group min-w-0"
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -183,6 +201,27 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu, onOpenLogin })
           </div>
         </div>
 
+        {/* Center: Public Portal Navigation Links (When Logged Out) */}
+        {!currentUser && (
+          <nav className="hidden lg:flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-300">
+            <a href="#welcome" className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              স্বাগতম
+            </a>
+            <a href="#notices" className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              নোটিশ বোর্ড
+            </a>
+            <a href="#calendar" className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              একাডেমিক ক্যালেন্ডার
+            </a>
+            <a href="#gallery" className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              ফটো গ্যালারি
+            </a>
+            <a href="#location" className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              লোকেশন ও যোগাযোগ
+            </a>
+          </nav>
+        )}
+
         {/* Right: Clean & Highly Responsive Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           {/* Online / Offline Simulator Status Pill (Primary retained item as requested) */}
@@ -225,16 +264,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu, onOpenLogin })
             )}
           </button>
 
-          {/* Notification Bell with Badge */}
-          <div className="relative">
-            <button
-              onClick={() => setShowNotifMenu(!showNotifMenu)}
-              title="সুপার অ্যাডমিন নোটিফিকেশন ও বার্তা"
-              className="relative p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-            >
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-black shadow-xs ring-1 ring-white dark:ring-slate-900">
+          {/* Notification Bell with Badge (only for logged-in users) */}
+          {currentUser && (
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifMenu(!showNotifMenu)}
+                title="সুপার অ্যাডমিন নোটিফিকেশন ও বার্তা"
+                className="relative p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-black shadow-xs ring-1 ring-white dark:ring-slate-900">
                   {toBanglaNumber(unreadCount)}
                 </span>
               )}
@@ -350,6 +390,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMobileMenu, onOpenLogin })
               </div>
             )}
           </div>
+        )}
 
           {/* User Account / Profile Badge */}
           <div className="relative">
