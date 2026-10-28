@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Notice, SchoolEvent, SchoolGalleryImage } from '../../types';
 import { toBanglaNumber } from '../../utils/bengaliUtils';
@@ -30,7 +30,8 @@ import {
   ChevronLeft,
   GraduationCap,
   ShieldCheck,
-  Laptop
+  Laptop,
+  ArrowUp
 } from 'lucide-react';
 
 interface PublicSchoolLandingViewProps {
@@ -57,6 +58,25 @@ export const PublicSchoolLandingView: React.FC<PublicSchoolLandingViewProps> = (
 
   // Calendar month selection for Academic Calendar
   const [currentMonthIndex, setCurrentMonthIndex] = useState<number>(new Date().getMonth()); // 0-indexed
+
+  // Sticky Go to Top State & Scroll Listener
+  const [showGoTop, setShowGoTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 200) {
+        setShowGoTop(true);
+      } else {
+        setShowGoTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const banglaMonths = [
     'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
@@ -101,156 +121,220 @@ export const PublicSchoolLandingView: React.FC<PublicSchoolLandingViewProps> = (
   return (
     <div className="space-y-12 sm:space-y-16 pb-12 animate-in fade-in duration-300">
       {/* ========================================================= */}
-      {/* 1. WELCOME SECTION (HERO & HEADMASTER MESSAGE)             */}
+      {/* 1. WELCOME SECTION (GORGEOUS HERO & HEAD TEACHER MESSAGE) */}
       {/* ========================================================= */}
-      <section id="welcome" className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-900">
-        {/* Decorative Top Gradient Banner */}
-        <div className="h-44 sm:h-64 bg-gradient-to-r from-emerald-800 via-teal-700 to-emerald-900 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
-          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-white/20 backdrop-blur-md text-white border border-white/30">
-              EIIN: {settings.code}
-            </span>
-            <span className="hidden sm:inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/40 text-emerald-100 border border-emerald-400/30">
-              স্থাপিত: {settings.established}
-            </span>
+      <section id="welcome" className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900">
+        {/* Top Decorative Gradient Banner with Rich Visual Accents */}
+        <div className="relative h-56 sm:h-72 lg:h-80 bg-gradient-to-r from-emerald-900 via-teal-800 to-slate-900 overflow-hidden flex items-end">
+          {/* Subtle Ambient Radial Glowing Lights & Grid Pattern */}
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]"></div>
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/25 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-400/20 rounded-full blur-3xl pointer-events-none"></div>
+
+          {/* Top Badges Bar */}
+          <div className="absolute top-4 sm:top-6 left-6 sm:left-8 right-6 sm:right-8 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-amber-400/90 text-amber-950 shadow-md">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>স্মার্ট ডিজিটাল শিক্ষাঙ্গন</span>
+              </span>
+              <span className="hidden md:inline-flex px-3 py-1 rounded-full text-xs font-extrabold bg-white/15 backdrop-blur-md text-emerald-100 border border-white/20">
+                স্থাপিত: {settings.established}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3.5 py-1 rounded-full text-xs font-black bg-white/20 backdrop-blur-md text-white border border-white/30 shadow-xs">
+                EIIN: {settings.code}
+              </span>
+              <span className="hidden sm:inline-flex px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">
+                সেশন: {settings.currentSession}
+              </span>
+            </div>
           </div>
 
-          <div className="absolute bottom-4 left-6 sm:bottom-6 sm:left-8 text-white">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-400 text-amber-950 mb-2 shadow-xs">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>ডিজিটাল স্মার্ট শিক্ষা প্ল্যাটফর্ম</span>
-            </span>
-            <h2 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tight drop-shadow-sm">
-              {settings.name}
-            </h2>
-            <p className="text-xs sm:text-sm text-emerald-100 font-medium mt-0.5 opacity-90">
-              {settings.nameEn} • {settings.address}
-            </p>
+          {/* Banner Hero Title & Monogram */}
+          <div className="p-6 sm:p-8 lg:p-10 w-full flex items-end justify-between relative z-10 text-white">
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* School Emblem / Logo */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl bg-white p-1.5 shadow-2xl ring-4 ring-emerald-400/40 shrink-0 overflow-hidden flex items-center justify-center">
+                {settings.logoUrl ? (
+                  <img src={settings.logoUrl} alt={settings.name} className="w-full h-full object-contain" />
+                ) : (
+                  <span className="text-3xl sm:text-4xl">🏫</span>
+                )}
+              </div>
+
+              <div>
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white drop-shadow-md">
+                  {settings.name}
+                </h1>
+                <p className="text-xs sm:text-sm lg:text-base text-emerald-100 font-semibold mt-1 opacity-95">
+                  {settings.nameEn} • {settings.address}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Hero Body Content */}
-        <div className="p-6 sm:p-8 lg:p-10 space-y-8">
-          <div className="flex flex-col lg:flex-row gap-8 items-start justify-between">
-            {/* Left: About School & Features */}
-            <div className="flex-1 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
-                <School className="w-4 h-4 text-emerald-600" />
-                <span>স্বাগতম আমাদের বিদ্যালয়ে</span>
+        {/* Hero Body Content - Desktop Gorgeous Split */}
+        <div className="p-6 sm:p-8 lg:p-12 space-y-10">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-stretch justify-between">
+            {/* Left: About School & Quick Nav Action Buttons (NO duplicate login button) */}
+            <div className="flex-1 flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-black border border-emerald-200 dark:border-emerald-800 shadow-xs">
+                  <School className="w-4 h-4 text-emerald-600" />
+                  <span>জ্ঞানের আলোয় আলোকিত হোক প্রতিটি জীবন</span>
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                  জ্ঞান, নৈতিকতা ও আধুনিক তথ্যপ্রযুক্তির সমন্বয়ে আগামীর নেতৃত্ব বিনির্মাণ।
+                </h2>
+
+                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+                  আমাদের প্রতিষ্ঠানে প্রতিটি শিক্ষার্থীর সুপ্ত প্রতিভা বিকাশ, সৃষ্টিশীল চিন্তন এবং নৈতিক মূল্যবোধ জাগ্রত করতে আমরা প্রতিশ্রুতিবদ্ধ। মাল্টিমিডিয়া শ্রেণিকক্ষ, কম্পিউটার ল্যাব, সমৃদ্ধ পাঠাগার এবং খেলাধুলার মাধ্যমে একটি সার্বিক ও আনন্দময় আধুনিক শিখন পরিবেশ নিশ্চিত করা হয়।
+                </p>
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-snug">
-                জ্ঞান, নৈতিকতা ও আধুনিক প্রযুক্তির সমন্বয়ে আগামী প্রজন্মের নেতৃত্ব গড়ে তোলা।
-              </h3>
+              {/* Action Buttons: Login button removed as requested, replaced with Gallery & Section Links */}
+              <div className="pt-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="#gallery"
+                    className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-700/25 flex items-center gap-2.5 transition-all cursor-pointer hover:scale-[1.02]"
+                  >
+                    <ImageIcon className="w-4 h-4 text-emerald-100" />
+                    <span>বিদ্যালয় ফটো গ্যালারি</span>
+                  </a>
 
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                আমাদের প্রতিষ্ঠানে প্রতিটি শিক্ষার্থীর সুপ্ত প্রতিভা বিকাশ, সৃষ্টিশীল চিন্তন এবং নৈতিক মূল্যবোধ জাগ্রত করতে আমরা প্রতিশ্রুতিবদ্ধ। ডিজিটাল কনটেন্ট, মাল্টিমিডিয়া শ্রেণিকক্ষ, সমৃদ্ধ বিজ্ঞান ল্যাব এবং খেলাধুলার মাধ্যমে একটি সার্বিক ও আনন্দময় শিখন পরিবেশ নিশ্চিত করা হয়।
-              </p>
+                  <a
+                    href="#notices"
+                    className="px-5 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.01]"
+                  >
+                    <Bell className="w-4 h-4 text-emerald-600" />
+                    <span>সাম্প্রতিক নোটিশ বোর্ড</span>
+                  </a>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={onOpenLogin}
-                  className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02]"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>অ্যাডমিন ও শিক্ষক লগইন</span>
-                </button>
+                  <a
+                    href="#calendar"
+                    className="px-5 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.01]"
+                  >
+                    <CalendarDays className="w-4 h-4 text-teal-600" />
+                    <span>মাসিক ক্যালেন্ডার ও ইভেন্ট</span>
+                  </a>
 
-                <a
-                  href="#notices"
-                  className="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm transition-colors flex items-center gap-2"
-                >
-                  <Bell className="w-4 h-4 text-emerald-600" />
-                  <span>নোটিশ বোর্ড দেখুন</span>
-                </a>
-
-                <a
-                  href="#location"
-                  className="px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm transition-colors flex items-center gap-2"
-                >
-                  <MapPin className="w-4 h-4 text-rose-500" />
-                  <span>লোকেশন ও যোগাযোগ</span>
-                </a>
+                  <a
+                    href="#location"
+                    className="px-5 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.01]"
+                  >
+                    <MapPin className="w-4 h-4 text-rose-500" />
+                    <span>লোকেশন ও যোগাযোগ</span>
+                  </a>
+                </div>
               </div>
             </div>
 
-            {/* Right: Head Teacher Message Card */}
-            <div className="w-full lg:w-96 bg-gradient-to-br from-slate-50 to-emerald-50/40 dark:from-slate-800/80 dark:to-slate-800/40 rounded-2xl p-6 border border-emerald-200/70 dark:border-slate-700 shadow-sm space-y-4 shrink-0">
-              <div className="flex items-center gap-3 border-b border-emerald-100 dark:border-slate-700 pb-3">
-                <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-emerald-600 bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center font-black text-xl text-emerald-800 dark:text-emerald-300 shadow-xs shrink-0">
-                  {settings.logoUrl ? (
-                    <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
-                  ) : (
-                    <span>🏫</span>
-                  )}
+            {/* Right: Head Teacher Message Card - Connected to Admin Custom Speech */}
+            <div className="w-full lg:w-[420px] bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20 dark:from-slate-800/90 dark:via-slate-800/60 dark:to-slate-850 rounded-3xl p-6 sm:p-7 border border-emerald-200/80 dark:border-slate-700 shadow-xl space-y-4 shrink-0 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3.5 border-b border-emerald-100 dark:border-slate-700 pb-4">
+                  {/* Head Teacher Portrait Photo */}
+                  <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl overflow-hidden border-2 border-emerald-600 shadow-md bg-emerald-100 dark:bg-emerald-950 shrink-0 flex items-center justify-center">
+                    {settings.headTeacherPhoto ? (
+                      <img
+                        src={settings.headTeacherPhoto}
+                        alt={settings.headTeacherName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : settings.logoUrl ? (
+                      <img
+                        src={settings.logoUrl}
+                        alt="Logo"
+                        className="w-full h-full object-contain p-1"
+                      />
+                    ) : (
+                      <span className="text-2xl">👨‍🏫</span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      <Sparkles className="w-3 h-3" />
+                      <span>{settings.headTeacherDesignation || 'প্রধান শিক্ষকের বাণী'}</span>
+                    </span>
+                    <h3 className="font-black text-base sm:text-lg text-slate-900 dark:text-white truncate">
+                      {settings.headTeacherName}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                      {settings.headTeacherDesignation || 'প্রধান শিক্ষক'}, {settings.name}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">
-                    প্রধান শিক্ষকের বাণী
-                  </span>
-                  <h4 className="font-black text-sm text-slate-900 dark:text-white">
-                    {settings.headTeacherName}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    প্রতিষ্ঠান প্রধান, {settings.name}
-                  </p>
+
+                {/* Custom Head Teacher Speech */}
+                <div className="relative pt-4">
+                  <span className="text-3xl text-emerald-400/40 font-serif leading-none select-none">“</span>
+                  <blockquote className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 italic leading-relaxed whitespace-pre-wrap pl-2 font-medium">
+                    {settings.headTeacherMessage ||
+                      'সুশিক্ষা জাতির মেরুদণ্ড। আদর্শ নাগরিক হিসেবে শিক্ষার্থীদের গড়ে তুলতে পাঠ্যপুস্তকের পাশাপাশি আমরা নৈতিক শিক্ষা, প্রযুক্তি দক্ষতা ও সহশিক্ষা কার্যক্রমে সমভাবে গুরুত্ব দিই। সম্মানিত অভিভাবকবৃন্দের আস্থা ও শিক্ষকদের ঐকান্তিক আত্মনিয়োগেই আমাদের প্রতিষ্ঠানের গৌরবময় পথচলা ও সার্বিক সাফল্য।'}
+                  </blockquote>
+                  <div className="text-right">
+                    <span className="text-3xl text-emerald-400/40 font-serif leading-none select-none">”</span>
+                  </div>
                 </div>
               </div>
 
-              <blockquote className="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">
-                "সুশিক্ষা জাতির মেরুদণ্ড। আদর্শ নাগরিক হিসেবে শিক্ষার্থীদের গড়ে তুলতে পাঠ্যপুস্তকের পাশাপাশি আমরা নৈতিক শিক্ষা ও সহশিক্ষা কার্যক্রমে সমভাবে গুরুত্ব দিই। অভিভাবকদের আস্থা ও শিক্ষকদের আত্মনিয়োগেই আমাদের প্রতিষ্ঠানের সার্বিক সাফল্য।"
-              </blockquote>
-
-              <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700">
-                <span>সেশন: {settings.currentSession}</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                  {settings.headTeacherName}
+              {/* Bottom Card Credentials & Seal */}
+              <div className="pt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-emerald-100 dark:border-slate-700/80">
+                <span className="font-semibold">সেশন: {settings.currentSession}</span>
+                <span className="font-extrabold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{settings.headTeacherName}</span>
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Quick Highlight Pillars */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center shrink-0">
+          {/* Quick Highlight Pillars / Statistics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-5 pt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/40 dark:from-emerald-950/40 dark:to-slate-800/60 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20">
                 <Laptop className="w-5 h-5" />
               </div>
               <div>
-                <h5 className="font-bold text-xs text-slate-900 dark:text-white">ডিজিটাল স্মার্ট শিখন</h5>
-                <p className="text-[10px] text-slate-500">মাল্টিমিডিয়া ও কম্পিউটার ল্যাব</p>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">ডিজিটাল স্মার্ট শিখন</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">মাল্টিমিডিয়া ও কম্পিউটার ল্যাব</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 flex items-center justify-center shrink-0">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/40 dark:from-blue-950/40 dark:to-slate-800/60 border border-blue-200/60 dark:border-blue-800/40 flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/20">
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <h5 className="font-bold text-xs text-slate-900 dark:text-white">অভিজ্ঞ শিক্ষক পরিষদ</h5>
-                <p className="text-[10px] text-slate-500">দক্ষ ও নিবেদিত শিক্ষকবৃন্দ</p>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">অভিজ্ঞ শিক্ষক পরিষদ</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">দক্ষ ও নিবেদিত শিক্ষকবৃন্দ</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 flex items-center justify-center shrink-0">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100/40 dark:from-purple-950/40 dark:to-slate-800/60 border border-purple-200/60 dark:border-purple-800/40 flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-600/20">
                 <Award className="w-5 h-5" />
               </div>
               <div>
-                <h5 className="font-bold text-xs text-slate-900 dark:text-white">সহ-শিক্ষা ও ক্রীড়া</h5>
-                <p className="text-[10px] text-slate-500">সাংস্কৃতিক ও খেলাধুলার সুযোগ</p>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">সহ-শিক্ষা ও ক্রীড়া</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">সাংস্কৃতিক ও খেলাধুলার সুযোগ</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center shrink-0">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100/40 dark:from-amber-950/40 dark:to-slate-800/60 border border-amber-200/60 dark:border-amber-800/40 flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h5 className="font-bold text-xs text-slate-900 dark:text-white">নিরাপদ ক্যাম্পাস</h5>
-                <p className="text-[10px] text-slate-500">সিসিটিভি ও সীমানা প্রাচীর</p>
+                <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">নিরাপদ ক্যাম্পাস</h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">সিসিটিভি ও সার্বক্ষণিক নিরাপত্তা</p>
               </div>
             </div>
           </div>
@@ -596,55 +680,31 @@ export const PublicSchoolLandingView: React.FC<PublicSchoolLandingViewProps> = (
               <div
                 key={img.id}
                 onClick={() => setLightboxImage(img)}
-                className="group relative bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col"
+                className="group relative bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
               >
                 {/* Photo container */}
-                <div className="w-full h-56 overflow-hidden relative bg-slate-100 dark:bg-slate-800">
+                <div className="w-full h-56 sm:h-64 overflow-hidden relative bg-slate-100 dark:bg-slate-800">
                   <img
                     src={img.imageUrl}
-                    alt={img.title}
+                    alt={img.caption || img.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                   />
-                  {/* Category Pill Tag */}
-                  <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-black/60 backdrop-blur-md text-white border border-white/20">
-                    {img.category === 'campus'
-                      ? 'ক্যাম্পাস'
-                      : img.category === 'classroom'
-                      ? 'শ্রেণিকক্ষ'
-                      : img.category === 'lab'
-                      ? 'ডিজিটাল ল্যাব'
-                      : img.category === 'sports'
-                      ? 'বার্ষিক ক্রীড়া'
-                      : img.category === 'cultural'
-                      ? 'সাংস্কৃতিক'
-                      : 'অন্যান্য'}
-                  </span>
 
                   {/* Hover Eye Badge */}
                   <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white backdrop-blur-xs">
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-emerald-900 font-extrabold text-xs shadow-lg">
-                      <Eye className="w-4 h-4" />
+                    <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-emerald-900 font-extrabold text-xs shadow-lg">
+                      <Eye className="w-4 h-4 text-emerald-700" />
                       <span>বড় করে দেখুন</span>
                     </span>
                   </div>
                 </div>
 
-                {/* Caption text */}
-                <div className="p-4 space-y-1">
-                  <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                    {img.title}
-                  </h4>
-                  {img.caption && (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                      {img.caption}
-                    </p>
-                  )}
-                  {img.date && (
-                    <p className="text-[10px] text-slate-400 pt-1 font-mono">
-                      📅 {img.date}
-                    </p>
-                  )}
+                {/* Only Caption as requested by user */}
+                <div className="p-4 bg-white dark:bg-slate-900 min-h-[58px] flex items-center">
+                  <p className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-100 line-clamp-2 leading-relaxed">
+                    {img.caption || img.title}
+                  </p>
                 </div>
               </div>
             ))
@@ -774,51 +834,64 @@ export const PublicSchoolLandingView: React.FC<PublicSchoolLandingViewProps> = (
       </section>
 
       {/* ========================================================= */}
-      {/* 6. PUBLIC FOOTER & DEVELOPER INFO                         */}
+      {/* 6. PUBLIC FOOTER (CLEAN & OFFICIAL)                       */}
       {/* ========================================================= */}
-      <footer className="pt-8 border-t border-slate-200 dark:border-slate-800 space-y-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
-          <div>
-            <p className="font-bold text-slate-800 dark:text-slate-200">
-              © ২০২৬ {settings.name}। সর্বস্বত্ব সংরক্ষিত।
+      {/* ========================================================= */}
+      {/* 6. PUBLIC FOOTER (ONLY LOGIN, REGISTER & GO TOP)          */}
+      {/* ========================================================= */}
+      <footer className="pt-8 pb-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* School Name & Copyright */}
+          <div className="text-center sm:text-left text-xs text-slate-500 dark:text-slate-400">
+            <p className="font-extrabold text-slate-900 dark:text-white text-sm">
+              © ২০২৬ {settings.name}
             </p>
-            <p className="text-[11px] mt-0.5">
+            <p className="text-xs mt-0.5">
               ইআইআইএন: {settings.code} • সেশন: {settings.currentSession}
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Only Login / Register New School & Go Top Buttons as requested */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={onOpenLogin}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/25 transition-all cursor-pointer hover:scale-[1.02]"
             >
-              প্রবেশ / লগইন
+              <LogIn className="w-4 h-4" />
+              <span>প্রবেশ / লগইন</span>
             </button>
+
             <button
               onClick={() => setIsRegisterModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 font-bold text-xs"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs border border-slate-200 dark:border-slate-700 transition-all cursor-pointer hover:scale-[1.02]"
             >
-              বিদ্যালয় নিবন্ধন
+              <Building2 className="w-4 h-4 text-emerald-600" />
+              <span>নতুন বিদ্যালয় নিবন্ধন</span>
+            </button>
+
+            <button
+              onClick={scrollToTop}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-extrabold text-xs shadow-md hover:bg-slate-800 dark:hover:bg-slate-100 transition-all cursor-pointer hover:scale-[1.02]"
+              title="পৃষ্ঠার শুরুতে যান"
+            >
+              <ArrowUp className="w-4 h-4" />
+              <span>উপরে যান</span>
             </button>
           </div>
         </div>
-
-        {/* Developer Attribution Card (Fixed Bottom as per User Guidelines) */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-100 to-emerald-50/50 dark:from-slate-900 dark:to-slate-900 border border-slate-200 dark:border-slate-800 text-center text-xs space-y-1">
-          <p className="font-extrabold text-slate-900 dark:text-white">
-            Developed by:
-          </p>
-          <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-            {developerInfo.name}
-          </p>
-          <p className="font-bold text-slate-700 dark:text-slate-300">
-            {developerInfo.company || 'APPTECH IT'}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            Helpline / WhatsApp: <span className="font-mono font-bold text-emerald-600">{developerInfo.whatsapp || '01936918482'}</span>
-          </p>
-        </div>
       </footer>
+
+      {/* Sticky Floating Go to Top Button */}
+      {showGoTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="Scroll to top"
+          className="fixed bottom-6 right-6 z-40 p-3 sm:px-4 sm:py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xl shadow-emerald-600/40 border border-white/20 flex items-center gap-2 text-xs font-black transition-all duration-300 hover:scale-110 cursor-pointer animate-in fade-in slide-in-from-bottom-5"
+        >
+          <ArrowUp className="w-5 h-5" />
+          <span className="hidden sm:inline">শীর্ষে যান</span>
+        </button>
+      )}
 
       {/* ========================================================= */}
       {/* MODALS: NOTICE DETAIL & LIGHTBOX GALLERY                  */}
@@ -885,20 +958,10 @@ export const PublicSchoolLandingView: React.FC<PublicSchoolLandingViewProps> = (
               />
             </div>
 
-            <div className="p-5 text-white space-y-1 bg-slate-900/90">
-              <h4 className="font-extrabold text-sm sm:text-base">
-                {lightboxImage.title}
-              </h4>
-              {lightboxImage.caption && (
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {lightboxImage.caption}
-                </p>
-              )}
-              {lightboxImage.date && (
-                <p className="text-[10px] text-slate-400 font-mono pt-1">
-                  📅 তারিখ: {lightboxImage.date}
-                </p>
-              )}
+            <div className="p-4 sm:p-5 text-white bg-slate-900/95 border-t border-slate-800">
+              <p className="font-extrabold text-xs sm:text-sm text-slate-100 leading-relaxed text-center sm:text-left">
+                {lightboxImage.caption || lightboxImage.title}
+              </p>
             </div>
           </div>
         </div>

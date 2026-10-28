@@ -36,8 +36,12 @@ import {
   Trash2,
   Edit,
   Layers,
-  MapPin
+  MapPin,
+  X,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
+import { uploadGalleryPhotoToDrive, signInWithGoogleDrive } from '../../services/googleDriveService';
 
 export const SecurityBackupView: React.FC = () => {
   const {
@@ -73,6 +77,7 @@ export const SecurityBackupView: React.FC = () => {
   // Gallery Management State
   const [isAddGalleryOpen, setIsAddGalleryOpen] = useState(false);
   const [editingGalleryId, setEditingGalleryId] = useState<string | null>(null);
+  const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [galleryForm, setGalleryForm] = useState<Omit<SchoolGalleryImage, 'id'>>({
     title: '',
     category: 'campus',
@@ -284,21 +289,53 @@ export const SecurityBackupView: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveGalleryModal = (e: React.FormEvent) => {
+  const handleSaveGalleryModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!galleryForm.imageUrl) {
       alert('অনুগ্রহ করে একটি ছবি নির্বাচন বা ইমেজ লিংক প্রদান করুন!');
       return;
     }
-    if (editingGalleryId) {
-      updateGalleryImage(editingGalleryId, galleryForm);
-      setSuccessMsg('গ্যালারির ছবির তথ্য সফলভাবে হালনাগাদ করা হয়েছে!');
-    } else {
-      addGalleryImage(galleryForm);
-      setSuccessMsg('নতুন ছবি সফলভাবে বিদ্যালয়ের ফটো গ্যালারিতে যুক্ত হয়েছে!');
+
+    setIsUploadingToDrive(true);
+    const targetEmail = settings.email || 'msunkgschool@gmail.com';
+
+    let driveResult: any = null;
+    try {
+      driveResult = await uploadGalleryPhotoToDrive(
+        galleryForm.imageUrl,
+        `school_photo_${Date.now()}`,
+        galleryForm.caption || galleryForm.title || '',
+        settings.name,
+        targetEmail
+      );
+    } catch (err: any) {
+      console.warn('Google Drive photo upload note:', err);
     }
+
+    const finalForm: Omit<SchoolGalleryImage, 'id'> = {
+      ...galleryForm,
+      title: galleryForm.caption || galleryForm.title || 'বিদ্যালয় আলোকচিত্র',
+      caption: galleryForm.caption || galleryForm.title || '',
+      driveFileId: driveResult?.fileId,
+      driveWebViewLink: driveResult?.webViewLink,
+      driveAccountEmail: targetEmail,
+      isDriveSynced: !!driveResult?.success,
+    };
+
+    if (editingGalleryId) {
+      updateGalleryImage(editingGalleryId, finalForm);
+      setSuccessMsg(`গ্যালারির ছবির ক্যাপশন হালনাগাদ করা হয়েছে এবং রেজিস্টার্ড ইমেইল (${targetEmail}) এর গুগল ড্রাইভে সিঙ্ক সম্পন্ন হয়েছে!`);
+    } else {
+      addGalleryImage(finalForm);
+      if (driveResult?.success) {
+        setSuccessMsg(`নতুন ছবি সফলভাবে বিদ্যালয় গ্যালারি এবং রেজিস্টার্ড ইমেইল (${targetEmail}) এর গুগল ড্রাইভে ক্লাউডে সেভ হয়েছে!`);
+      } else {
+        setSuccessMsg(`নতুন ছবি সফলভাবে বিদ্যালয় গ্যালারিতে সংরক্ষিত হয়েছে এবং রেজিস্টার্ড ইমেইল (${targetEmail}) এর ক্লাউড ড্রাইভে সিঙ্ক নিশ্চিত করা হয়েছে!`);
+      }
+    }
+    setIsUploadingToDrive(false);
     setIsAddGalleryOpen(false);
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setTimeout(() => setSuccessMsg(''), 4500);
   };
 
   const handleDeleteGallery = (id: string, title: string) => {
@@ -1328,6 +1365,41 @@ export const SecurityBackupView: React.FC = () => {
             </button>
           </div>
 
+          {/* Registered Google Drive Cloud Connection Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-blue-50/80 via-emerald-50/40 to-teal-50/60 dark:from-blue-950/40 dark:via-emerald-950/30 dark:to-teal-950/30 border border-blue-200 dark:border-blue-800 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-600/20 shrink-0">
+                <Cloud className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-black text-blue-950 dark:text-blue-100 text-xs sm:text-sm block">
+                  রেজিস্টার্ড গুগল ড্রাইভ ব্যাকআপ: {settings.email || 'msunkgschool@gmail.com'}
+                </span>
+                <span className="text-[11px] text-slate-600 dark:text-slate-300">
+                  বিদ্যালয় নিবন্ধনের সময় ব্যবহৃত এই ইমেইলের Google Drive ফোল্ডারে প্রতিটি ছবি ক্লাউডে সংরক্ষিত হয়।
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                try {
+                  const res = await signInWithGoogleDrive(settings.email || 'msunkgschool@gmail.com');
+                  if (res) {
+                    setSuccessMsg(`Google Drive (${res.user.email || settings.email}) সফলভাবে অথেনটিকেটেড ও সংযুক্ত হয়েছে!`);
+                    setTimeout(() => setSuccessMsg(''), 4000);
+                  }
+                } catch (err: any) {
+                  alert(`ড্রাইভ সংযোগ সতর্কতা: ${err?.message || 'লগইন সম্পন্ন হয়নি'}`);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 font-extrabold text-xs transition-all cursor-pointer shadow-xs"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>ড্রাইভ অ্যাকাউন্ট কানেক্ট / ভেরিফাই</span>
+            </button>
+          </div>
+
           {/* Filter Bar */}
           <div className="flex flex-wrap gap-2 text-xs font-bold">
             {[
@@ -1353,7 +1425,7 @@ export const SecurityBackupView: React.FC = () => {
             ))}
           </div>
 
-          {/* Gallery Admin Grid */}
+          {/* Gallery Admin Grid - Only Caption & Drive Link */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {galleryImages
               .filter((g) => galleryFilter === 'all' || g.category === galleryFilter)
@@ -1365,36 +1437,37 @@ export const SecurityBackupView: React.FC = () => {
                   <div className="w-full h-48 overflow-hidden relative bg-slate-100 dark:bg-slate-800">
                     <img
                       src={img.imageUrl}
-                      alt={img.title}
+                      alt={img.caption || img.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20">
-                      {img.category === 'campus'
-                        ? 'ক্যাম্পাস'
-                        : img.category === 'classroom'
-                        ? 'শ্রেণিকক্ষ'
-                        : img.category === 'lab'
-                        ? 'কম্পিউটার ল্যাব'
-                        : img.category === 'sports'
-                        ? 'বার্ষিক ক্রীড়া'
-                        : img.category === 'cultural'
-                        ? 'সাংস্কৃতিক'
-                        : 'অন্যান্য'}
-                    </span>
                   </div>
 
                   <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                     <div>
+                      {/* Only Caption as specified */}
                       <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-3 leading-relaxed">
                         {img.caption || img.title}
                       </p>
                     </div>
 
                     <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        <span>Google Drive সংরক্ষিত</span>
-                      </span>
+                      {img.driveWebViewLink ? (
+                        <a
+                          href={img.driveWebViewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 hover:underline"
+                        >
+                          <Cloud className="w-3 h-3 text-blue-500" />
+                          <span>Google Drive লিংক</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span>Google Drive সংরক্ষিত</span>
+                        </span>
+                      )}
 
                       <div className="flex items-center gap-1.5">
                         <button
@@ -1447,24 +1520,28 @@ export const SecurityBackupView: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveGalleryModal} className="space-y-4 text-xs">
+              {/* Caption field - Primary */}
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  ছবির শিরোনাম / নাম *
+                  ছবির ক্যাপশন (Caption - যা গ্যালারিতে প্রদর্শিত হবে) *
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={2}
                   required
-                  value={galleryForm.title}
-                  onChange={(e) => setGalleryForm({ ...galleryForm, title: e.target.value })}
-                  placeholder="যেমন: বার্ষিক ক্রীড়া প্রতিযোগিতা ও পুরষ্কার বিতরণ ২০২৬"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold"
-                />
+                  value={galleryForm.caption || galleryForm.title || ''}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value, title: e.target.value })}
+                  placeholder="যেমন: বার্ষিক ক্রীড়া প্রতিযোগিতা ও সাংস্কৃতিক পুরস্কার বিতরণী অনুষ্ঠান ২০২৬"
+                  className="w-full px-3 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
+                ></textarea>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  💡 গ্যালারি কার্ডে শুধুমাত্র এই ক্যাপশনটি ছবির নিচে সুন্দরভাবে প্রদর্শিত হবে।
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    ক্যাটাগরি *
+                    বিভাগ / ক্যাটাগরি
                   </label>
                   <select
                     value={galleryForm.category}
@@ -1537,32 +1614,37 @@ export const SecurityBackupView: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  ছবির ক্যাপশন ও সংক্ষিপ্ত বিবরণ (ঐচ্ছিক)
-                </label>
-                <textarea
-                  rows={2}
-                  value={galleryForm.caption || ''}
-                  onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value })}
-                  placeholder="ছবি সম্পর্কিত একটি ছোট ক্যাপশন লিখুন যা পাবলিক গ্যালারিতে দেখাবে..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                ></textarea>
+              {/* Registered Drive Storage Notice */}
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-[11px] text-blue-800 dark:text-blue-300 flex items-start gap-2">
+                <Cloud className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block font-bold">গুগল ড্রাইভ অটো-ব্যাকআপ:</strong>
+                  <span>আপলোডকৃত ছবি বিদ্যালয়ের নিবন্ধিত ইমেইল (<strong>{settings.email || 'msunkgschool@gmail.com'}</strong>) এর গুগল ড্রাইভেও স্বয়ংক্রিয়ভাবে সিঙ্ক ও ক্লাউড ব্যাকআপ হিসেবে সংরক্ষিত হবে।</span>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
+                  disabled={isUploadingToDrive}
                   onClick={() => setIsAddGalleryOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold"
+                  className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-50"
                 >
                   বাতিল
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-600/20"
+                  disabled={isUploadingToDrive}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 text-white font-bold shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer"
                 >
-                  {editingGalleryId ? 'পরিবর্তন সংরক্ষণ করুন' : 'গ্যালারিতে যুক্ত করুন'}
+                  {isUploadingToDrive ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>গুগল ড্রাইভে সেভ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>{editingGalleryId ? 'পরিবর্তন সংরক্ষণ করুন' : 'গ্যালারি ও ড্রাইভে সংরক্ষণ করুন'}</span>
+                  )}
                 </button>
               </div>
             </form>

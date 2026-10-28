@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export const NoticeView: React.FC = () => {
-  const { notices, addNotice, deleteNotice, settings, currentUser } = useApp();
+  const { notices, addNotice, deleteNotice, settings, currentUser, setCurrentView } = useApp();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [printableNotice, setPrintableNotice] = useState<Notice | null>(null);

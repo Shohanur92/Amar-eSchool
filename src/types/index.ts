@@ -369,5 +369,9 @@ export interface SchoolGalleryImage {
   imageUrl: string;
   caption?: string;
   date?: string;
+  driveFileId?: string;
+  driveWebViewLink?: string;
+  driveAccountEmail?: string;
+  isDriveSynced?: boolean;
 }
 
